@@ -120,7 +120,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 2px;
+  padding: 4px 2px;
   background-color: #333;
   border: 2px solid #555;
   border-radius: 4px;
@@ -130,7 +130,7 @@
   font-weight: 500;
   transition: all 0.2s ease;
   width: 100%;
-  min-height: 40px;
+  min-height: 36px;
   flex: 1;
   text-align: center;
 }
@@ -148,19 +148,19 @@
 }
 
 .layer-tab .material-icons {
-  font-size: 20px;
+  font-size: 24px;
 }
 
 .layer-tab-item:nth-child(1) .layer-tab .material-icons {
-  color: #ff0000;
+  color: #ff6666;
 }
 
 .layer-tab-item:nth-child(2) .layer-tab .material-icons {
-  color: #00ff00;
+  color: #66ff66;
 }
 
 .layer-tab-item:nth-child(3) .layer-tab .material-icons {
-  color: #0000ff;
+  color: #6666ff;
 }
 
 .layer-controls {
