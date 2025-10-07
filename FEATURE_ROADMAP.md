@@ -1,181 +1,195 @@
-# 🗺️ MapPainter Feature Roadmap
+# 🗺️ PixelPainter Feature Roadmap
 
 ## Übersicht der Feature-Wellen
 
-MapPainter wird in mehreren Wellen entwickelt, um eine stabile Basis zu schaffen und schrittweise erweiterte Features hinzuzufügen.
+PixelPainter wird in mehreren Wellen entwickelt, um eine stabile Basis zu schaffen und schrittweise erweiterte Features hinzuzufügen.
 
 ---
 
-## 🚀 Wave 1: Core Features (Aktuell verfügbar)
+## 🚀 Wave 1: Core Features (✅ Vollständig implementiert)
 
-**Status**: ✅ Implementiert  
-**Ziel**: Grundlegende Pixel Art Funktionalität
+**Status**: ✅ Vollständig implementiert  
+**Ziel**: Grundlegende Pixel Art Funktionalität mit Game Development Features
 
 ### Implementierte Features
-- [x] **Pixel Canvas**: Hochauflösendes Zeichenfeld mit Zoom und Pan
-- [x] **Color Picker**: RGB/HSV Farbauswahl mit History
-- [x] **Basic Tools**: Pinsel, Radiergummi, Pipette, Füllwerkzeug
-- [x] **File Operations**: Speichern/Laden (PNG, JSON)
-- [x] **Responsive UI**: Moderne, anpassbare Benutzeroberfläche
-- [x] **Real-time Preview**: Sofortige Vorschau aller Änderungen
-- [x] **Keyboard Shortcuts**: Vollständige Tastaturunterstützung
-- [x] **Project Management**: Canvas-Größe und Einstellungen
+- [x] **Multi-Layer Canvas**: Drei separate Layer (Environment, Entities, Functions) mit individueller Sichtbarkeit und Transparenz
+- [x] **Advanced Color Picker**: RGB-Slider mit Hex-Input, vordefinierte Farbpalette, Layer-spezifische Paletten
+- [x] **Comprehensive Toolset**: Pinsel, Radiergummi, Pipette, Füllwerkzeug, Linie, Rechteck mit konfigurierbarer Größe
+- [x] **Color Table System**: Channel-basierte Farbzuweisung mit RGB-Kanal-Mapping für Game Development
+- [x] **Advanced Grid System**: Konfigurierbares Raster mit anpassbarer Farbe und Stärke
+- [x] **Zoom & Pan Controls**: Präzise Navigation mit Mouse-Wheel-Zoom und Right-Click-Pan
+- [x] **File Operations**: Canvas-Größe ändern (16x16 bis 256x256), PNG-Export, Bild-Import
+- [x] **Undo/Redo System**: Vollständige Historie mit 50-Level-Undo/Redo
+- [x] **Real-time Preview**: Sofortige Vorschau aller Tools und Hover-Effekte
+- [x] **Local Storage**: Automatische Speicherung von Einstellungen und Paletten
+- [x] **Responsive UI**: Moderne, anpassbare Benutzeroberfläche mit Tab-System
+- [x] **Keyboard Shortcuts**: Vollständige Tastaturunterstützung für alle Tools
+- [x] **Layer Management**: Layer-spezifische Paletten und Einstellungen
 
 ### Technische Basis
-- React 18+ mit TypeScript
-- Webpack für Module Bundling
+- React 18+ mit TypeScript und Strict Mode
+- Webpack für Module Bundling und Hot Reload
 - CSS Modules für Scoped Styling
 - Express Development Server
+- Canvas 2D API für Pixel-Manipulation
+- Local Storage für Persistenz
+- Multi-Layer Canvas Architecture
+- Channel-based Color System
 
 ---
 
-## 🎯 Wave 2: Advanced Tools (Geplant Q1 2024)
+## 🎯 Wave 2: Advanced Tools (🚧 In Entwicklung Q1 2024)
 
-**Status**: 📅 Geplant  
-**Ziel**: Professionelle Bearbeitungstools
+**Status**: 🚧 In Entwicklung  
+**Ziel**: Professionelle Bearbeitungstools und erweiterte Funktionalität
 
 ### Geplante Features
-- [ ] **Layer System**
-  - Mehrschichtige Bearbeitung
-  - Layer-Visibility und -Opacity
-  - Layer-Reordering und -Grouping
+- [ ] **Enhanced Layer System**
+  - Layer-Reordering mit Drag & Drop
+  - Layer-Gruppen und -Hierarchie
   - Layer-Masken und -Blendmodes
+  - Erweiterte Layer-Transformationen
 
 - [ ] **Animation Support**
-  - Frame-basierte Animationen
-  - Timeline-Editor
-  - Onion-Skinning
+  - Frame-basierte Animationen mit Timeline-Editor
+  - Onion-Skinning für bessere Animation
   - Animation-Export (GIF, Sprite Sheets)
+  - Keyframe-Interpolation
 
 - [ ] **Advanced Brushes**
   - Verschiedene Pinselformen (Rund, Quadrat, Custom)
-  - Pinsel-Größe und -Härte
-  - Texturierte Pinsel
-  - Custom Brush Creator
+  - Pinsel-Größe und -Härte mit dynamischer Anpassung
+  - Texturierte Pinsel mit Custom Patterns
+  - Custom Brush Creator mit Import/Export
 
 - [ ] **Selection Tools**
-  - Rechteckige und freie Auswahl
-  - Magic Wand Tool
-  - Selection-Transformation (Move, Scale, Rotate)
-  - Copy/Paste zwischen Selections
+  - Rechteckige und freie Auswahl mit Lasso-Tool
+  - Magic Wand Tool für automatische Farbbereichsauswahl
+  - Selection-Transformation (Move, Scale, Rotate, Flip)
+  - Copy/Paste zwischen Selections mit Zwischenablage
 
 - [ ] **Enhanced Undo/Redo**
-  - Multi-Level Undo/Redo
-  - Undo-History mit Vorschau
-  - Selective Undo für bestimmte Aktionen
-  - Undo für Layer-Operationen
+  - Multi-Level Undo/Redo mit Vorschau-Thumbnails
+  - Selective Undo für bestimmte Aktionen und Layer
+  - Undo-History mit Timeline-Ansicht
+  - Branch-basierte Undo-Historie
 
 - [ ] **Grid & Snap System**
-  - Konfigurierbares Raster
+  - Erweiterte Raster-Konfiguration mit verschiedenen Modi
   - Snap-to-Grid für präzise Bearbeitung
-  - Pixel-Perfect Mode
-  - Raster-Visualisierung
+  - Pixel-Perfect Mode mit automatischer Ausrichtung
+  - Raster-Visualisierung mit anpassbaren Farben und Stilen
 
 ### Technische Erweiterungen
-- Canvas 2D API Optimierungen
+- Canvas 2D API Optimierungen für bessere Performance
 - WebGL für Performance-kritische Operationen
-- IndexedDB für lokale Datenpersistenz
+- IndexedDB für erweiterte lokale Datenpersistenz
 - Web Workers für Background-Processing
+- Service Worker für Offline-Funktionalität
+- WebAssembly für komplexe Algorithmen
 
 ---
 
-## 🎮 Wave 3: Game Development (Geplant Q2 2024)
+## 🎮 Wave 3: Game Development (📅 Geplant Q2 2024)
 
 **Status**: 📅 Geplant  
-**Ziel**: Spezialisierte Tools für Game Development
+**Ziel**: Spezialisierte Tools für Game Development und Asset-Erstellung
 
 ### Geplante Features
 - [ ] **Sprite Sheet Generator**
-  - Automatische Sprite-Sheet-Erstellung
+  - Automatische Sprite-Sheet-Erstellung mit verschiedenen Packing-Algorithmen
   - Animation-zu-Sprite-Sheet Konvertierung
-  - Verschiedene Packing-Algorithmen
   - Sprite-Sheet-Import und -Bearbeitung
+  - Optimierte Packing für verschiedene Game Engines
 
 - [ ] **Tile Map Editor**
-  - Tile-basierte Map-Erstellung
-  - Tile-Set Management
-  - Auto-Tiling mit Regel-basierten Tiles
+  - Tile-basierte Map-Erstellung mit verschiedenen Tile-Sets
+  - Auto-Tiling mit regel-basierten Tiles
   - Collision-Layer für Game Engines
+  - Tile-Animation und -Variationen
 
-- [ ] **Palette Management**
-  - Erweiterte Paletten-Verwaltung
-  - Palette-Import aus verschiedenen Formaten
-  - Color-Reduction Tools
+- [ ] **Advanced Palette Management**
+  - Palette-Import aus verschiedenen Formaten (GIMP, Aseprite, etc.)
+  - Color-Reduction Tools für optimierte Paletten
   - Palette-Animation für Day/Night Cycles
+  - Palette-Sharing und -Community
 
 - [ ] **Multiple Export Formats**
-  - PNG, GIF, SVG, JSON Export
-  - Game Engine spezifische Formate
+  - PNG, GIF, SVG, JSON Export mit verschiedenen Qualitätseinstellungen
+  - Game Engine-spezifische Formate (Unity, Unreal, Godot)
   - Batch-Export für mehrere Assets
-  - Custom Export-Presets
+  - Custom Export-Presets und -Templates
 
 - [ ] **Asset Library**
-  - Integrierte Bibliothek für Game Assets
-  - Asset-Kategorisierung und -Suche
+  - Integrierte Bibliothek für Game Assets mit Kategorisierung
+  - Asset-Suche und -Filterung
   - Community Asset Sharing
-  - Asset-Versionierung
+  - Asset-Versionierung und -History
 
 - [ ] **Collision Editor**
-  - Tools für Collision-Map-Erstellung
-  - Verschiedene Collision-Shapes
+  - Tools für Collision-Map-Erstellung mit verschiedenen Shapes
   - Physics-Property Assignment
   - Game Engine Integration
+  - Collision-Optimierung und -Debugging
 
 ### Game Engine Integration
-- Unity Package Export
-- Unreal Engine Integration
-- Godot Resource Export
-- Custom Game Engine APIs
+- Unity Package Export mit Asset-Bundles
+- Unreal Engine Integration mit Blueprint-Support
+- Godot Resource Export mit GDScript-Integration
+- Custom Game Engine APIs und Plugin-System
+- Cross-Platform Asset-Kompatibilität
 
 ---
 
-## 🔧 Wave 4: Professional Features (Geplant Q3 2024)
+## 🔧 Wave 4: Professional Features (📅 Geplant Q3 2024)
 
 **Status**: 📅 Geplant  
-**Ziel**: Enterprise-Level Features und Erweiterbarkeit
+**Ziel**: Enterprise-Level Features, Erweiterbarkeit und Collaboration
 
 ### Geplante Features
 - [ ] **Plugin System**
-  - JavaScript-basierte Plugin-API
+  - JavaScript-basierte Plugin-API mit TypeScript-Support
   - Plugin-Manager und -Marketplace
   - Custom Tool Development
   - Third-Party Integration APIs
 
-- [ ] **Batch Processing**
+- [ ] **Advanced Batch Processing**
   - Automatische Verarbeitung mehrerer Dateien
-  - Script-basierte Automatisierung
-  - Batch-Operationen (Resize, Format-Conversion)
-  - Scheduled Processing
+  - Script-basierte Automatisierung mit Workflow-Engine
+  - Batch-Operationen (Resize, Format-Conversion, Filter)
+  - Scheduled Processing und Background-Jobs
 
-- [ ] **Version Control**
-  - Integrierte Git-Integration
-  - Project-Versionierung
+- [ ] **Version Control Integration**
+  - Integrierte Git-Integration mit GUI
+  - Project-Versionierung und -History
   - Branch-basierte Entwicklung
-  - Merge-Conflict Resolution
+  - Merge-Conflict Resolution und -Visualization
 
-- [ ] **Collaboration Features**
-  - Multi-User-Bearbeitung
-  - Real-time Collaboration
+- [ ] **Real-time Collaboration**
+  - Multi-User-Bearbeitung mit Live-Synchronisation
   - Comment und Review System
   - Project Sharing und Permissions
+  - Team-Management und -Workflows
 
 - [ ] **Advanced Filters**
-  - Bildfilter und Effekte
-  - Custom Filter Development
+  - GPU-accelerated Bildfilter und Effekte
+  - Custom Filter Development mit WebGL
   - Filter-Presets und -Chains
-  - GPU-accelerated Processing
+  - Real-time Filter-Preview
 
 - [ ] **Custom Scripts**
-  - JavaScript-basierte Automatisierung
+  - JavaScript-basierte Automatisierung mit Node.js-Integration
   - Custom Tool Development
-  - Workflow-Automation
-  - API-Integration
+  - Workflow-Automation und -Scheduling
+  - API-Integration und -Webhooks
 
 ### Enterprise Features
-- Team-Management und -Permissions
-- Cloud-Synchronisation
+- Team-Management und -Permissions mit RBAC
+- Cloud-Synchronisation und -Backup
 - Advanced Analytics und Reporting
 - Enterprise Support und SLA
+- Single Sign-On (SSO) Integration
+- Audit-Logs und Compliance-Features
 
 ---
 
@@ -226,10 +240,10 @@ MapPainter wird in mehreren Wellen entwickelt, um eine stabile Basis zu schaffen
 ## 🤝 Community Feedback
 
 ### Feedback Channels
-- [GitHub Issues](https://github.com/meierdesigns/MapPainter/issues)
-- [GitHub Discussions](https://github.com/meierdesigns/MapPainter/discussions)
-- [Discord Community](https://discord.gg/mappainter)
-- [User Surveys](https://forms.gle/mappainter-feedback)
+- [GitHub Issues](https://github.com/meierdesigns/PixelPainter/issues)
+- [GitHub Discussions](https://github.com/meierdesigns/PixelPainter/discussions)
+- [Discord Community](https://discord.gg/pixelpainter)
+- [User Surveys](https://forms.gle/pixelpainter-feedback)
 
 ### Feature Request Process
 1. **Community Discussion**: Feature wird in GitHub Discussions vorgeschlagen

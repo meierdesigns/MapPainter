@@ -1,12 +1,12 @@
-# Contributing to MapPainter
+# Contributing to PixelPainter
 
-Vielen Dank für dein Interesse an MapPainter! Wir freuen uns über Beiträge von der Community.
+Vielen Dank für dein Interesse an PixelPainter! Wir freuen uns über Beiträge von der Community.
 
 ## 🚀 Erste Schritte
 
 ### Development Setup
 1. Fork das Repository
-2. Klone deinen Fork: `git clone git@github.com:dein-username/MapPainter.git`
+2. Klone deinen Fork: `git clone git@github.com:dein-username/PixelPainter.git`
 3. Installiere Dependencies: `npm install`
 4. Starte den Development Server: `npm start`
 
@@ -20,25 +20,32 @@ Vielen Dank für dein Interesse an MapPainter! Wir freuen uns über Beiträge vo
 ## 📝 Code Standards
 
 ### TypeScript
-- Verwende strikte TypeScript-Konfiguration
+- Verwende strikte TypeScript-Konfiguration mit `"use strict"`
 - Definiere Interfaces für alle Props und State
 - Vermeide `any` - verwende spezifische Typen
 - Dokumentiere komplexe Typen mit JSDoc
+- Verwende Utility Types (`Partial`, `Pick`, `Omit`) wo sinnvoll
 
 ### React
 - Verwende Functional Components mit Hooks
 - Implementiere `useCallback` und `useMemo` für Performance
-- Verwende TypeScript für alle Props
+- Verwende TypeScript für alle Props und State
 - Halte Komponenten klein und fokussiert
+- Verwende Custom Hooks für wiederverwendbare Logik
+- Implementiere Error Boundaries für robuste Fehlerbehandlung
 
 ### CSS
 - Verwende CSS Modules für Scoped Styling
 - Folge der BEM-Methodik für Klassennamen
 - Verwende CSS Custom Properties für Theming
 - Halte Styles responsive und accessible
+- Verwende CSS Grid und Flexbox für Layouts
+- Implementiere Dark/Light Mode Support
 
 ### Code Style
 ```typescript
+"use strict";
+
 // ✅ Gut
 interface CanvasProps {
   width: number;
@@ -50,8 +57,13 @@ const PixelCanvas: React.FC<CanvasProps> = ({ width, height, onPixelChange }) =>
   const [pixels, setPixels] = useState<string[][]>([]);
   
   const handlePixelClick = useCallback((x: number, y: number) => {
-    // Implementation
-  }, []);
+    // Implementation with proper error handling
+    try {
+      onPixelChange(x, y, currentColor);
+    } catch (error) {
+      console.error('Pixel change failed:', error);
+    }
+  }, [onPixelChange, currentColor]);
   
   return (
     <div className="pixel-canvas">
@@ -227,15 +239,17 @@ npm run test:e2e
 ## 📞 Hilfe bekommen
 
 ### Ressourcen
-- [GitHub Discussions](https://github.com/meierdesigns/MapPainter/discussions)
-- [Documentation Wiki](https://github.com/meierdesigns/MapPainter/wiki)
-- [Issue Tracker](https://github.com/meierdesigns/MapPainter/issues)
+- [GitHub Discussions](https://github.com/meierdesigns/PixelPainter/discussions)
+- [Documentation Wiki](https://github.com/meierdesigns/PixelPainter/wiki)
+- [Issue Tracker](https://github.com/meierdesigns/PixelPainter/issues)
+- [Feature Roadmap](FEATURE_ROADMAP.md)
+- [API Documentation](docs/api.md)
 
 ### Kontakt
 - **Email**: dev@meierdesigns.com
-- **Discord**: [MapPainter Community](https://discord.gg/mappainter)
+- **Discord**: [PixelPainter Community](https://discord.gg/pixelpainter)
 - **Twitter**: [@MeierDesigns](https://twitter.com/meierdesigns)
 
 ---
 
-**Vielen Dank für deinen Beitrag zu MapPainter! 🎨**
+**Vielen Dank für deinen Beitrag zu PixelPainter! 🎨**

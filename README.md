@@ -1,45 +1,58 @@
-# 🎨 MapPainter - Professional Pixel Art Editor
+# 🎨 PixelPainter - Professional Pixel Art Editor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
 
-Ein moderner, professioneller Pixel Art Editor mit erweiterten Features für Game Development und digitale Kunst. MapPainter bietet eine intuitive Benutzeroberfläche mit leistungsstarken Tools für die Erstellung von Pixel Art, Sprites und Game Assets.
+Ein moderner, professioneller Pixel Art Editor mit erweiterten Features für Game Development und digitale Kunst. PixelPainter bietet eine intuitive Benutzeroberfläche mit leistungsstarken Tools für die Erstellung von Pixel Art, Sprites und Game Assets.
 
 ## 🌟 Features Overview
 
-### 🚀 Wave 1: Core Features (Aktuell verfügbar)
-- **Pixel Canvas**: Hochauflösendes Zeichenfeld mit Zoom und Pan-Funktionalität
-- **Color Picker**: Erweiterte Farbauswahl mit RGB/HSV-Unterstützung
-- **Basic Tools**: Pinsel, Radiergummi, Pipette, Füllwerkzeug
-- **File Operations**: Speichern/Laden von Projekten (PNG, JSON)
-- **Responsive UI**: Moderne, anpassbare Benutzeroberfläche
-- **Real-time Preview**: Sofortige Vorschau aller Änderungen
+### 🚀 Wave 1: Core Features (✅ Vollständig implementiert)
+- **Multi-Layer Canvas**: Drei separate Layer (Environment, Entities, Functions) mit individueller Sichtbarkeit und Transparenz
+- **Advanced Color Picker**: RGB-Slider mit Hex-Input, vordefinierte Farbpalette, Layer-spezifische Paletten
+- **Comprehensive Toolset**: Pinsel, Radiergummi, Pipette, Füllwerkzeug, Linie, Rechteck mit konfigurierbarer Größe
+- **Color Table System**: Channel-basierte Farbzuweisung mit RGB-Kanal-Mapping für Game Development
+- **Advanced Grid System**: Konfigurierbares Raster mit anpassbarer Farbe und Stärke
+- **Zoom & Pan Controls**: Präzise Navigation mit Mouse-Wheel-Zoom und Right-Click-Pan
+- **File Operations**: Canvas-Größe ändern (16x16 bis 256x256), PNG-Export, Bild-Import
+- **Undo/Redo System**: Vollständige Historie mit 50-Level-Undo/Redo
+- **Real-time Preview**: Sofortige Vorschau aller Tools und Hover-Effekte
+- **Local Storage**: Automatische Speicherung von Einstellungen und Paletten
+- **Responsive UI**: Moderne, anpassbare Benutzeroberfläche mit Tab-System
 
-### 🎯 Wave 2: Advanced Tools (Geplant)
-- **Layer System**: Mehrschichtige Bearbeitung mit Ebenen-Management
-- **Animation Support**: Frame-basierte Animationen für Sprites
-- **Advanced Brushes**: Verschiedene Pinselformen und Texturen
-- **Selection Tools**: Rechteckige und freie Auswahl mit Transformation
-- **Undo/Redo System**: Erweiterte Rückgängig-Funktionalität
-- **Grid & Snap**: Raster und Snap-to-Grid für präzise Bearbeitung
+### 🎯 Wave 2: Advanced Tools (🚧 In Entwicklung)
+- **Enhanced Layer System**: Erweiterte Layer-Management mit Drag & Drop, Layer-Gruppen
+- **Animation Support**: Frame-basierte Animationen mit Timeline-Editor und Onion-Skinning
+- **Advanced Brushes**: Verschiedene Pinselformen (Rund, Quadrat, Custom), Texturierte Pinsel
+- **Selection Tools**: Rechteckige und freie Auswahl mit Transformation (Move, Scale, Rotate)
+- **Enhanced Undo/Redo**: Multi-Level-Undo mit Vorschau und selektive Rückgängig-Funktionen
+- **Grid & Snap System**: Snap-to-Grid, Pixel-Perfect Mode, konfigurierbare Raster-Visualisierung
+- **Custom Brush Creator**: Tool zur Erstellung eigener Pinselformen und Texturen
+- **Magic Wand Tool**: Automatische Farbbereichsauswahl
+- **Copy/Paste System**: Zwischenablage-Funktionen für Selections
 
-### 🎮 Wave 3: Game Development (Geplant)
-- **Sprite Sheet Generator**: Automatische Sprite-Sheet-Erstellung
-- **Tile Map Editor**: Spezialisierte Tools für Tile-basierte Spiele
-- **Palette Management**: Erweiterte Paletten-Verwaltung und -Import
-- **Export Formats**: Multiple Export-Formate (PNG, GIF, SVG, JSON)
-- **Asset Library**: Integrierte Bibliothek für Game Assets
-- **Collision Editor**: Tools für Collision-Maps
+### 🎮 Wave 3: Game Development (📅 Geplant Q2 2024)
+- **Sprite Sheet Generator**: Automatische Sprite-Sheet-Erstellung mit verschiedenen Packing-Algorithmen
+- **Tile Map Editor**: Spezialisierte Tools für Tile-basierte Spiele mit Auto-Tiling
+- **Advanced Palette Management**: Palette-Import aus verschiedenen Formaten, Color-Reduction Tools
+- **Multiple Export Formats**: PNG, GIF, SVG, JSON, Game Engine-spezifische Formate
+- **Asset Library**: Integrierte Bibliothek für Game Assets mit Community-Sharing
+- **Collision Editor**: Tools für Collision-Map-Erstellung mit verschiedenen Shapes
+- **Game Engine Integration**: Unity, Unreal Engine, Godot Export-Funktionen
+- **Animation Export**: GIF-Export für Sprite-Animationen
+- **Batch Processing**: Automatische Verarbeitung mehrerer Assets
 
-### 🔧 Wave 4: Professional Features (Geplant)
-- **Plugin System**: Erweiterbare Architektur mit Plugin-API
-- **Batch Processing**: Automatische Verarbeitung mehrerer Dateien
-- **Version Control**: Integrierte Versionskontrolle für Projekte
-- **Collaboration**: Multi-User-Bearbeitung und Sharing
-- **Advanced Filters**: Bildfilter und Effekte
-- **Custom Scripts**: JavaScript-basierte Automatisierung
+### 🔧 Wave 4: Professional Features (📅 Geplant Q3 2024)
+- **Plugin System**: JavaScript-basierte Plugin-API mit Marketplace und Custom Tool Development
+- **Advanced Batch Processing**: Script-basierte Automatisierung mit Scheduled Processing
+- **Version Control Integration**: Git-Integration mit Branch-basierter Entwicklung
+- **Real-time Collaboration**: Multi-User-Bearbeitung mit Comment und Review System
+- **Advanced Filters**: GPU-accelerated Bildfilter und Custom Filter Development
+- **Custom Scripts**: JavaScript-basierte Workflow-Automation und API-Integration
+- **Enterprise Features**: Team-Management, Cloud-Synchronisation, Advanced Analytics
+- **Performance Optimization**: WebGL-Acceleration, Web Workers für Background-Processing
 
 ## 🛠️ Installation
 
@@ -51,8 +64,8 @@ Ein moderner, professioneller Pixel Art Editor mit erweiterten Features für Gam
 ### Schnellstart
 ```bash
 # Repository klonen
-git clone git@github.com:meierdesigns/MapPainter.git
-cd MapPainter
+git clone git@github.com:meierdesigns/PixelPainter.git
+cd PixelPainter
 
 # Dependencies installieren
 npm install
@@ -76,47 +89,60 @@ npm run serve
 ## 🎨 Verwendung
 
 ### Grundlegende Bedienung
-1. **Canvas**: Klicken und ziehen zum Zeichnen
-2. **Farbauswahl**: Klick auf Color Picker für Farbauswahl
-3. **Tools**: Wechsel zwischen Pinsel, Radiergummi und anderen Tools
-4. **Speichern**: Ctrl+S oder über File Menu
-5. **Laden**: Ctrl+O oder über File Menu
+1. **Canvas**: Klicken und ziehen zum Zeichnen auf dem aktiven Layer
+2. **Layer-Wechsel**: Verwende die Layer-Tabs (Environment, Entities, Functions)
+3. **Farbauswahl**: RGB-Slider, Hex-Input oder vordefinierte Farben
+4. **Tools**: Wechsel zwischen Pinsel, Radiergummi, Pipette, Füllwerkzeug, Linie, Rechteck
+5. **Zoom & Pan**: Mouse-Wheel für Zoom, Right-Click + Drag für Pan
+6. **Speichern**: PNG-Export über File Menu
+7. **Canvas-Größe**: Dropdown-Menü für verschiedene Größen (16x16 bis 256x256)
 
 ### Tastaturkürzel
-- `Ctrl + S`: Projekt speichern
-- `Ctrl + O`: Projekt öffnen
-- `Ctrl + Z`: Rückgängig
+- `Ctrl + S`: PNG-Export
+- `Ctrl + O`: Bild laden
+- `Ctrl + Z`: Rückgängig (50-Level-Historie)
 - `Ctrl + Y`: Wiederholen
-- `Space + Drag`: Canvas verschieben
-- `Mouse Wheel`: Zoom in/out
-- `R`: Pipette-Tool
+- `Right-Click + Drag`: Canvas verschieben (Pan)
+- `Mouse Wheel`: Zoom in/out (0.5x bis 32x)
 - `B`: Pinsel-Tool
 - `E`: Radiergummi-Tool
+- `R`: Pipette-Tool
+- `F`: Füllwerkzeug
+- `L`: Linie-Tool
+- `Q`: Rechteck-Tool
 
 ### Erweiterte Features
-- **Zoom**: Mouse Wheel oder Zoom-Controls
-- **Pan**: Space + Drag oder Pan-Tool
-- **Color History**: Letzte verwendete Farben werden gespeichert
-- **Project Settings**: Canvas-Größe und andere Einstellungen
+- **Multi-Layer System**: Drei separate Layer mit individueller Sichtbarkeit und Transparenz
+- **Color Table**: Channel-basierte Farbzuweisung für Game Development
+- **Layer Palettes**: Jeder Layer hat seine eigene Farbpalette
+- **Grid System**: Konfigurierbares Raster mit anpassbarer Farbe und Stärke
+- **Real-time Preview**: Hover-Effekte zeigen Vorschau der Tools
+- **Auto-Save**: Einstellungen und Paletten werden automatisch gespeichert
+- **Brush Size**: Konfigurierbare Pinselgröße (1px bis 32px)
+- **Canvas Sizes**: Unterstützung für 16x16, 32x32, 64x64, 128x128, 256x256 Pixel
 
 ## 🏗️ Projektstruktur
 
 ```
-MapPainter/
+PixelPainter/
 ├── public/
 │   └── index.html          # HTML Template
 ├── src/
 │   ├── components/         # React Komponenten
-│   │   ├── ColorPicker.tsx # Farbauswahl-Komponente
-│   │   ├── FileOperations.tsx # Datei-Operationen
-│   │   ├── PixelCanvas.tsx # Haupt-Canvas-Komponente
-│   │   └── Toolbar.tsx     # Toolbar mit Tools
+│   │   ├── ColorPicker.tsx # Erweiterte Farbauswahl mit RGB-Slidern
+│   │   ├── ColorTable.tsx  # Channel-basierte Farbtabelle
+│   │   ├── ColorModal.tsx  # Modal für Farbbearbeitung
+│   │   ├── FileOperations.tsx # Datei-Operationen und Canvas-Größe
+│   │   ├── PixelCanvas.tsx # Multi-Layer Canvas mit Zoom/Pan
+│   │   └── Toolbar.tsx     # Toolbar mit Tools und Grid-Controls
 │   ├── services/           # API Services
-│   │   └── paletteApi.ts   # Palette-Management
+│   │   └── paletteApi.ts   # Palette-Management (Server-Integration)
 │   ├── styles/             # CSS Stylesheets
 │   │   ├── App.css         # Haupt-Styles
 │   │   └── global.css      # Globale Styles
-│   ├── App.tsx             # Haupt-App-Komponente
+│   ├── utils/              # Utility Functions
+│   │   └── colorUtils.ts   # Farb-Konvertierungs-Funktionen
+│   ├── App.tsx             # Haupt-App-Komponente mit State-Management
 │   └── index.tsx           # App Entry Point
 ├── server.js               # Express Server
 ├── webpack.config.js       # Webpack Konfiguration
@@ -157,33 +183,49 @@ npm run test
 
 ## 📋 Roadmap
 
-### Wave 1 (Aktuell) ✅
-- [x] Basic Canvas Implementation
-- [x] Color Picker
-- [x] File Operations
-- [x] Basic Tools (Pinsel, Radiergummi, Pipette)
-- [x] Responsive UI
+### Wave 1 (Vollständig implementiert) ✅
+- [x] Multi-Layer Canvas System
+- [x] Advanced Color Picker mit RGB-Slidern
+- [x] Comprehensive Toolset (Pinsel, Radiergummi, Pipette, Füllwerkzeug, Linie, Rechteck)
+- [x] Color Table System für Game Development
+- [x] File Operations (PNG-Export, Bild-Import, Canvas-Größe)
+- [x] Advanced Grid System
+- [x] Zoom & Pan Controls
+- [x] Undo/Redo System (50-Level)
+- [x] Real-time Preview
+- [x] Local Storage Integration
+- [x] Responsive UI mit Tab-System
 
 ### Wave 2 (Q1 2024) 🚧
-- [ ] Layer System
-- [ ] Animation Support
-- [ ] Advanced Brushes
-- [ ] Selection Tools
-- [ ] Enhanced Undo/Redo
+- [ ] Enhanced Layer System (Drag & Drop, Layer-Gruppen)
+- [ ] Animation Support (Timeline-Editor, Onion-Skinning)
+- [ ] Advanced Brushes (Custom Shapes, Texturen)
+- [ ] Selection Tools (Magic Wand, Transformation)
+- [ ] Enhanced Undo/Redo (Multi-Level mit Vorschau)
+- [ ] Grid & Snap System (Pixel-Perfect Mode)
+- [ ] Custom Brush Creator
+- [ ] Copy/Paste System
 
 ### Wave 3 (Q2 2024) 📅
-- [ ] Sprite Sheet Generator
-- [ ] Tile Map Editor
-- [ ] Palette Management
-- [ ] Multiple Export Formats
-- [ ] Asset Library
+- [ ] Sprite Sheet Generator (Auto-Packing)
+- [ ] Tile Map Editor (Auto-Tiling)
+- [ ] Advanced Palette Management (Import/Export)
+- [ ] Multiple Export Formats (GIF, SVG, Game Engine)
+- [ ] Asset Library (Community-Sharing)
+- [ ] Collision Editor
+- [ ] Game Engine Integration (Unity, Unreal, Godot)
+- [ ] Animation Export (GIF)
+- [ ] Batch Processing
 
 ### Wave 4 (Q3 2024) 📅
-- [ ] Plugin System
-- [ ] Batch Processing
-- [ ] Version Control
-- [ ] Collaboration Features
-- [ ] Advanced Filters
+- [ ] Plugin System (JavaScript API, Marketplace)
+- [ ] Advanced Batch Processing (Script-Automation)
+- [ ] Version Control Integration (Git)
+- [ ] Real-time Collaboration (Multi-User)
+- [ ] Advanced Filters (GPU-accelerated)
+- [ ] Custom Scripts (Workflow-Automation)
+- [ ] Enterprise Features (Team-Management, Cloud-Sync)
+- [ ] Performance Optimization (WebGL, Web Workers)
 
 ## 🤝 Mitwirken
 
@@ -213,12 +255,12 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) f�
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/meierdesigns/MapPainter/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/meierdesigns/MapPainter/discussions)
+- **Issues**: [GitHub Issues](https://github.com/meierdesigns/PixelPainter/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/meierdesigns/PixelPainter/discussions)
 - **Email**: support@meierdesigns.com
 
 ---
 
 **Entwickelt mit ❤️ von MeierDesigns**
 
-*MapPainter - Where creativity meets precision*
+*PixelPainter - Where creativity meets precision*
