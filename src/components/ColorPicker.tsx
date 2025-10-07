@@ -2,6 +2,8 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Layer, LayerType, PaletteColor } from '../App';
+import { hexToRgb, rgbToHex, getLayerIndex } from '../utils/colorUtils';
+import ColorTable, { ColorTableEntry } from './ColorTable';
 import './ColorPicker.css';
 
 interface ColorPickerProps {
@@ -18,6 +20,15 @@ interface ColorPickerProps {
   onAddColorToPalette: (layerId: number, color: string, name?: string) => void;
   onUpdatePaletteColor: (layerId: number, colorId: string, updates: Partial<PaletteColor>) => void;
   onRemovePaletteColor: (layerId: number, colorId: string) => void;
+  colorTable: ColorTableEntry[];
+  onColorTableChange: (colorTable: ColorTableEntry[]) => void;
+  layerPalettes: {
+    red: PaletteColor[];
+    green: PaletteColor[];
+    blue: PaletteColor[];
+  };
+  activeTab: 'picker' | 'table';
+  onTabChange: (tab: 'picker' | 'table') => void;
 }
 
 const ColorPicker: React.FC<ColorPickerProps> = ({
@@ -33,7 +44,12 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   layerPalette,
   onAddColorToPalette,
   onUpdatePaletteColor,
-  onRemovePaletteColor
+  onRemovePaletteColor,
+  colorTable,
+  onColorTableChange,
+  layerPalettes,
+  activeTab,
+  onTabChange
 }) => {
 
   const predefinedColors = [
@@ -60,25 +76,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
     setSelectedPaletteColor(color); // Mark this palette color as selected
   }, [onColorChange]);
 
-  // Helper function to get layer index
-  const getLayerIndex = useCallback(() => {
-    return currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
-  }, [currentLayer]);
-
-  // Convert hex to RGB
-  const hexToRgb = useCallback((hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-  }, []);
-
-  // Convert RGB to hex
-  const rgbToHex = useCallback((r: number, g: number, b: number) => {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-  }, []);
+  // Use utility functions
 
   // Get current RGB values
   const [currentRgb, setCurrentRgb] = useState(() => hexToRgb(currentColor));
@@ -121,7 +119,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   // Handle saving current color to palette
   const handleSaveColorToPalette = useCallback(() => {
-    const layerIndex = getLayerIndex();
+    const layerIndex = getLayerIndex(currentLayer);
     
     // Check if original color is already in the palette (for updates)
     const existingColorIndex = layerPalette.findIndex(color => color.color === originalColor);
@@ -145,7 +143,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   // Handle replacing a specific palette color with current color
   const handleReplacePaletteColor = useCallback((paletteColorId: string) => {
-    const layerIndex = getLayerIndex();
+    const layerIndex = getLayerIndex(currentLayer);
     // Find the original palette color to preserve its name
     const originalPaletteColor = layerPalette.find(color => color.id === paletteColorId);
     const originalName = originalPaletteColor?.name || `RGB(${currentRgb.r},${currentRgb.g},${currentRgb.b})`;
@@ -159,8 +157,29 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   return (
     <div className="color-picker">
-      <div className="color-picker-section">
-        <h3 className="color-picker-title">Pinselgröße</h3>
+      {/* Tab Navigation */}
+      <div className="color-picker-tabs">
+        <button
+          className={`color-picker-tab ${activeTab === 'picker' ? 'active' : ''}`}
+          onClick={() => onTabChange('picker')}
+        >
+          <span className="material-icons">palette</span>
+          Farbpicker
+        </button>
+        <button
+          className={`color-picker-tab ${activeTab === 'table' ? 'active' : ''}`}
+          onClick={() => onTabChange('table')}
+        >
+          <span className="material-icons">table_chart</span>
+          Farbtabelle
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'picker' && (
+        <>
+          <div className="color-picker-section">
+            <h3 className="color-picker-title">Pinselgröße</h3>
         
         <div className="brush-size-control">
           <span className="brush-size-label">{brushSize}px</span>
@@ -193,11 +212,11 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
               <button
                 className={`layer-tab ${currentLayer === (layer.id === 0 ? 'red' : layer.id === 1 ? 'green' : 'blue') ? 'active' : ''}`}
                 onClick={() => onLayerChange(layer.id === 0 ? 'red' : layer.id === 1 ? 'green' : 'blue')}
+                title={layer.name}
               >
                 <span className="material-icons">
-                  {layer.id === 0 ? 'fiber_manual_record' : layer.id === 1 ? 'fiber_manual_record' : 'fiber_manual_record'}
+                  {layer.id === 0 ? 'landscape' : layer.id === 1 ? 'person' : 'functions'}
                 </span>
-                <span>{layer.name}</span>
               </button>
               <div className="layer-controls">
                 <button
@@ -232,7 +251,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                   type="text"
                   value={paletteColor.name}
                   onChange={(e) => {
-                    onUpdatePaletteColor(getLayerIndex(), paletteColor.id, { name: e.target.value });
+                    onUpdatePaletteColor(getLayerIndex(currentLayer), paletteColor.id, { name: e.target.value });
                   }}
                   className="palette-color-name"
                   placeholder="Farbname"
@@ -247,7 +266,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                 <button
                   className="palette-remove-button"
                   onClick={() => {
-                    onRemovePaletteColor(getLayerIndex(), paletteColor.id);
+                    onRemovePaletteColor(getLayerIndex(currentLayer), paletteColor.id);
                   }}
                   title="Farbe entfernen"
                 >
@@ -272,7 +291,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
             <button
               className="palette-add-button"
               onClick={() => {
-                onAddColorToPalette(getLayerIndex(), currentColor);
+                onAddColorToPalette(getLayerIndex(currentLayer), currentColor);
               }}
               title="Aktuelle Farbe zur Palette hinzufügen"
             >
@@ -365,6 +384,19 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           </div>
         </div>
       </div>
+        </>
+      )}
+
+      {/* Color Table Tab - Content is now rendered in the main canvas area */}
+      {activeTab === 'table' && (
+        <div className="color-table-placeholder">
+          <div className="placeholder-content">
+            <span className="material-icons">table_chart</span>
+            <h3>Farbtabelle</h3>
+            <p>Die Farbtabelle wird im Hauptbereich angezeigt</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
