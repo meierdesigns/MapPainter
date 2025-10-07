@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MapPainter Community Support
+    url: https://github.com/meierdesigns/MapPainter/discussions
+    about: Ask questions and get help from the community
+  - name: Documentation
+    url: https://github.com/meierdesigns/MapPainter/wiki
+    about: Check our documentation and guides

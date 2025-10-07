@@ -1,0 +1,299 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.toolbar.horizontal-toolbar {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #444;
+}
+
+.toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbar.horizontal-toolbar .toolbar-section {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cccccc;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.horizontal-toolbar .tool-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.tool-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 8px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tool-button:hover {
+  background-color: #444;
+  border-color: #777;
+  color: #ffffff;
+}
+
+.tool-button.active {
+  background-color: #007acc;
+  border-color: #0099ff;
+  color: #ffffff;
+}
+
+.tool-button .material-icons {
+  font-size: 24px;
+}
+
+.brush-size-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.brush-size-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+  white-space: nowrap;
+}
+
+.brush-size-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brush-size-slider {
+  width: 120px;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.brush-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #007acc;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #0099ff;
+  transition: all 0.2s ease;
+}
+
+.brush-size-slider::-webkit-slider-thumb:hover {
+  background: #0099ff;
+  transform: scale(1.1);
+}
+
+.brush-size-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #007acc;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #0099ff;
+  transition: all 0.2s ease;
+}
+
+.brush-size-slider::-moz-range-thumb:hover {
+  background: #0099ff;
+  transform: scale(1.1);
+}
+
+.brush-size-preview {
+  background-color: #007acc;
+  border-radius: 50%;
+  min-width: 8px;
+  min-height: 8px;
+  border: 2px solid #0099ff;
+  flex-shrink: 0;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.zoom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.zoom-button:hover:not(:disabled) {
+  background-color: #444;
+  border-color: #777;
+  color: #ffffff;
+}
+
+.zoom-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-button .material-icons {
+  font-size: 20px;
+}
+
+.zoom-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #cccccc;
+  min-width: 40px;
+  text-align: center;
+}
+
+.view-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.horizontal-toolbar .view-controls {
+  flex-direction: row;
+}
+
+.view-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.view-button:hover {
+  background-color: #444;
+  border-color: #777;
+  color: #ffffff;
+}
+
+.view-button.active {
+  background-color: #007acc;
+  border-color: #0099ff;
+  color: #ffffff;
+}
+
+.view-button .material-icons {
+  font-size: 20px;
+}
+
+.edit-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.horizontal-toolbar .edit-controls {
+  flex-direction: row;
+}
+
+.edit-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.edit-button:hover:not(:disabled) {
+  background-color: #444;
+  border-color: #777;
+  color: #ffffff;
+}
+
+.edit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-button .material-icons {
+  font-size: 20px;
+}
+
+.edit-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-icon-button:hover:not(:disabled) {
+  background-color: #444;
+  border-color: #777;
+  color: #ffffff;
+}
+
+.edit-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-icon-button .material-icons {
+  font-size: 20px;
+}

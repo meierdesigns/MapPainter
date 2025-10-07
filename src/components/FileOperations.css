@@ -1,0 +1,135 @@
+.file-operations {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+.canvas-size-control {
+  display: flex;
+  align-items: center;
+}
+
+.canvas-size-select {
+  padding: 6px 12px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.canvas-size-select:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.canvas-size-select:hover {
+  background-color: #444;
+  border-color: #777;
+}
+
+.canvas-size-select option {
+  background-color: #333;
+  color: #ffffff;
+}
+
+.file-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.file-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #cccccc;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.file-button:hover {
+  background-color: #444;
+  border-color: #777;
+  color: #ffffff;
+}
+
+.file-button.new {
+  border-color: #00aa00;
+}
+
+.file-button.new:hover {
+  background-color: #00aa00;
+  color: #ffffff;
+}
+
+.file-button.save {
+  border-color: #007acc;
+}
+
+.file-button.save:hover {
+  background-color: #007acc;
+  color: #ffffff;
+}
+
+.file-button.load {
+  border-color: #ff8000;
+}
+
+.file-button.load:hover {
+  background-color: #ff8000;
+  color: #ffffff;
+}
+
+.file-button .material-icons {
+  font-size: 18px;
+}
+
+.canvas-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #2a2a2a;
+  border: 1px solid #555;
+  border-radius: 6px;
+}
+
+.canvas-size-controls label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+  white-space: nowrap;
+}
+
+.canvas-size-select {
+  flex: 1;
+  padding: 4px 8px;
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.canvas-size-select:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.canvas-size-select option {
+  background-color: #333;
+  color: #ffffff;
+}
