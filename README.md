@@ -20,6 +20,10 @@ Ein moderner, professioneller Pixel Art Editor mit erweiterten Features für Gam
 - **Color Table Cards**: Übersichtliche Darstellung der Kanal-Zuweisungen
 - **Server Integration**: Express.js Backend für Palette-Management und JSON-Export
 - **Color Table Service**: Zentrale Verwaltung der Farbtabellen mit localStorage-Synchronisation
+- **🎨 Animated Background Patterns**: Konfigurierbare Hintergrund-Muster mit drei verschiedenen Typen (Streifen, Punkte, Rauten)
+- **🌈 Dual Color System**: Separate Farbauswahl für Muster und Hintergrund mit Color-Pickern
+- **⚙️ Advanced Pattern Controls**: Größe, Transparenz und Animationsgeschwindigkeit einstellbar
+- **💾 Persistent Settings**: Alle Hintergrund-Einstellungen werden automatisch gespeichert
 
 ### 🔧 Technische Verbesserungen
 - **TypeScript Integration**: Vollständige Type-Safety für alle Komponenten
@@ -42,6 +46,9 @@ Ein moderner, professioneller Pixel Art Editor mit erweiterten Features für Gam
 - **Real-time Preview**: Sofortige Vorschau aller Tools und Hover-Effekte
 - **Local Storage**: Automatische Speicherung von Einstellungen und Paletten
 - **Responsive UI**: Moderne, anpassbare Benutzeroberfläche mit Tab-System
+- **🎨 Animated Background Patterns**: Drei Muster-Typen (Streifen, Punkte, Rauten) mit konfigurierbarer Größe, Farbe und Animation
+- **🌈 Dual Color System**: Separate Farbauswahl für Muster und Hintergrund mit Color-Pickern und Presets
+- **⚙️ Advanced Pattern Controls**: Dropdown-Interface mit Slidern für Größe, Transparenz und Animationsgeschwindigkeit
 
 ### 🎯 Wave 2: Advanced Tools (🚧 In Entwicklung)
 - **Enhanced Layer System**: Erweiterte Layer-Management mit Drag & Drop, Layer-Gruppen
@@ -160,6 +167,9 @@ npm run serve
 - **Canvas Sizes**: Unterstützung für 16x16, 32x32, 64x64, 128x128, 256x256 Pixel
 - **Server Integration**: Express.js Backend für Palette-Management und JSON-Export
 - **Color Table Service**: Zentrale Verwaltung der Farbtabellen mit localStorage-Synchronisation
+- **🎨 Animated Background Patterns**: Drei Muster-Typen (Streifen, Punkte, Rauten) mit konfigurierbarer Größe (8-48px), Transparenz (10-100%) und Animationsgeschwindigkeit (5-60s)
+- **🌈 Dual Color System**: Separate Farbauswahl für Muster und Hintergrund mit HTML5 Color-Pickern und vordefinierten Presets
+- **⚙️ Advanced Pattern Controls**: Dropdown-Interface in der Toolbar mit Live-Vorschau und automatischer Speicherung aller Einstellungen
 
 ## 🏗️ Projektstruktur
 
@@ -253,6 +263,9 @@ npm run test
 - [x] Real-time Preview
 - [x] Local Storage Integration
 - [x] Responsive UI mit Tab-System
+- [x] **🎨 Animated Background Patterns** - Drei Muster-Typen mit konfigurierbaren Parametern
+- [x] **🌈 Dual Color System** - Separate Farbauswahl für Muster und Hintergrund
+- [x] **⚙️ Advanced Pattern Controls** - Dropdown-Interface mit Live-Vorschau
 
 ### Wave 2 (Q1 2024) 🚧
 - [ ] Enhanced Layer System (Drag & Drop, Layer-Gruppen)
