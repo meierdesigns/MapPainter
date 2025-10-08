@@ -1,0 +1,16 @@
+{
+  "palettes": {
+    "environment": [],
+    "entities": [],
+    "functions": []
+  },
+  "appState": {
+    "currentTool": "brush",
+    "currentColor": "#ff0000",
+    "currentLayer": "red",
+    "brushSize": 1,
+    "canvasSize": 16,
+    "zoom": 2,
+    "showGrid": true
+  }
+}

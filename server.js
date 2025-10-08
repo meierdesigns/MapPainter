@@ -8,6 +8,7 @@ const cors = require('cors');
 const app = express();
 const PORT = 3001;
 const PALETTES_FILE = path.join(__dirname, 'palettes.json');
+const COLOR_TABLES_FILE = path.join(__dirname, 'src', 'data', 'colorTables.json');
 
 // Middleware
 app.use(cors());
@@ -72,6 +73,38 @@ async function saveState(state) {
     return true;
   } catch (error) {
     console.error('Error saving state:', error);
+    return false;
+  }
+}
+
+// Load color tables from file
+async function loadColorTables() {
+  try {
+    const data = await fs.readFile(COLOR_TABLES_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading color tables:', error);
+    return {
+      red: [],
+      green: [],
+      blue: []
+    };
+  }
+}
+
+// Save color tables to file
+async function saveColorTables(colorTables) {
+  try {
+    // Ensure the directory exists
+    const dir = path.dirname(COLOR_TABLES_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    
+    // Write the file
+    await fs.writeFile(COLOR_TABLES_FILE, JSON.stringify(colorTables, null, 2));
+    console.log('🔧 Server: Successfully wrote colorTables.json to:', COLOR_TABLES_FILE);
+    return true;
+  } catch (error) {
+    console.error('Error saving color tables:', error);
     return false;
   }
 }
@@ -165,6 +198,63 @@ app.put('/api/palettes/:layer', async (req, res) => {
   } catch (error) {
     console.error('Error updating palettes:', error);
     res.status(500).json({ error: 'Failed to update palettes' });
+  }
+});
+
+// Color Tables API
+app.get('/api/color-tables', async (req, res) => {
+  try {
+    const colorTables = await loadColorTables();
+    res.json(colorTables);
+  } catch (error) {
+    console.error('Error getting color tables:', error);
+    res.status(500).json({ error: 'Failed to load color tables' });
+  }
+});
+
+app.post('/api/color-tables', async (req, res) => {
+  try {
+    const colorTables = req.body;
+    
+    if (!colorTables || typeof colorTables !== 'object') {
+      return res.status(400).json({ error: 'Color tables data is required' });
+    }
+
+    const success = await saveColorTables(colorTables);
+    
+    if (success) {
+      res.json({ success: true, colorTables });
+    } else {
+      res.status(500).json({ error: 'Failed to save color tables' });
+    }
+  } catch (error) {
+    console.error('Error saving color tables:', error);
+    res.status(500).json({ error: 'Failed to save color tables' });
+  }
+});
+
+app.put('/api/color-tables/:layer', async (req, res) => {
+  try {
+    const { layer } = req.params;
+    const { colorTable } = req.body;
+    
+    if (!colorTable || !Array.isArray(colorTable)) {
+      return res.status(400).json({ error: 'Color table array is required' });
+    }
+
+    const currentColorTables = await loadColorTables();
+    currentColorTables[layer] = colorTable;
+    
+    const success = await saveColorTables(currentColorTables);
+    
+    if (success) {
+      res.json({ success: true, colorTable: currentColorTables[layer] });
+    } else {
+      res.status(500).json({ error: 'Failed to update color table' });
+    }
+  } catch (error) {
+    console.error('Error updating color table:', error);
+    res.status(500).json({ error: 'Failed to update color table' });
   }
 });
 
