@@ -107,6 +107,22 @@ npm run build
 npm run serve
 ```
 
+## 📸 Screenshots
+
+### Hauptinterface - Color Picker
+![Color Picker Interface](docs/screenshots/color-picker-interface.png)
+*Erweiterte Farbauswahl mit RGB-Slidern, Layer-Management und vordefinierten Farben*
+
+### Channel-basierte Farbtabelle
+![Channel Color Table](docs/screenshots/channel-color-table.png)
+*RGB-Kanal-Mapping für Game Development mit individueller Kanal-Zuweisung*
+
+### Toolbar und Hauptwerkzeuge
+![Main Toolbar](docs/screenshots/main-toolbar.png)
+*Vollständige Toolbar mit Zeichenwerkzeugen, Zoom-Controls und Raster-Einstellungen*
+
+> **💡 Screenshots hinzufügen**: Führe `add_screenshots.bat` aus oder kopiere die Screenshot-Dateien manuell in den `docs/screenshots/` Ordner. Weitere Informationen findest du in [docs/screenshots/README.md](docs/screenshots/README.md).
+
 ## 🎨 Verwendung
 
 ### Grundlegende Bedienung
