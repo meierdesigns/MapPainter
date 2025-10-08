@@ -4,8 +4,29 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/meierdesigns/PixelPainter)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](https://github.com/meierdesigns/PixelPainter/releases)
 
 Ein moderner, professioneller Pixel Art Editor mit erweiterten Features für Game Development und digitale Kunst. PixelPainter bietet eine intuitive Benutzeroberfläche mit leistungsstarken Tools für die Erstellung von Pixel Art, Sprites und Game Assets.
+
+## 🚀 Neueste Updates (v1.0.0)
+
+### ✨ Neue Features
+- **Channel-basierte Farbtabelle**: RGB-Kanal-Mapping für Game Development mit individueller Kanal-Zuweisung
+- **Multi-Layer System**: Drei separate Layer (Environment, Entities, Functions) mit eigenen Farbpaletten
+- **Erweiterte Color Picker**: RGB-Slider mit Hex-Input und Layer-spezifische Paletten
+- **Color Modal System**: Detaillierte Farbbearbeitung mit Kanal-Slidern
+- **Channel Slider Component**: Präzise Kanal-Wert-Einstellung mit visueller Vorschau
+- **Color Table Cards**: Übersichtliche Darstellung der Kanal-Zuweisungen
+- **Server Integration**: Express.js Backend für Palette-Management und JSON-Export
+- **Color Table Service**: Zentrale Verwaltung der Farbtabellen mit localStorage-Synchronisation
+
+### 🔧 Technische Verbesserungen
+- **TypeScript Integration**: Vollständige Type-Safety für alle Komponenten
+- **Modulare Architektur**: Saubere Trennung von Services, Utils und Komponenten
+- **Performance Optimierung**: Debounced localStorage-Operationen und effiziente Re-Renders
+- **Error Handling**: Robuste Fehlerbehandlung mit Fallback-Mechanismen
+- **Code Quality**: Strict Mode, ESLint-Konfiguration und konsistente Code-Struktur
 
 ## 🌟 Features Overview
 
@@ -112,42 +133,63 @@ npm run serve
 - `Q`: Rechteck-Tool
 
 ### Erweiterte Features
-- **Multi-Layer System**: Drei separate Layer mit individueller Sichtbarkeit und Transparenz
-- **Color Table**: Channel-basierte Farbzuweisung für Game Development
-- **Layer Palettes**: Jeder Layer hat seine eigene Farbpalette
+- **Multi-Layer System**: Drei separate Layer (Environment, Entities, Functions) mit individueller Sichtbarkeit und Transparenz
+- **Channel-basierte Farbtabelle**: RGB-Kanal-Mapping für Game Development mit individueller Kanal-Zuweisung
+- **Layer Palettes**: Jeder Layer hat seine eigene Farbpalette mit automatischer Synchronisation
+- **Color Modal System**: Detaillierte Farbbearbeitung mit Kanal-Slidern und visueller Vorschau
 - **Grid System**: Konfigurierbares Raster mit anpassbarer Farbe und Stärke
 - **Real-time Preview**: Hover-Effekte zeigen Vorschau der Tools
 - **Auto-Save**: Einstellungen und Paletten werden automatisch gespeichert
 - **Brush Size**: Konfigurierbare Pinselgröße (1px bis 32px)
 - **Canvas Sizes**: Unterstützung für 16x16, 32x32, 64x64, 128x128, 256x256 Pixel
+- **Server Integration**: Express.js Backend für Palette-Management und JSON-Export
+- **Color Table Service**: Zentrale Verwaltung der Farbtabellen mit localStorage-Synchronisation
 
 ## 🏗️ Projektstruktur
 
 ```
 PixelPainter/
 ├── public/
-│   └── index.html          # HTML Template
+│   └── index.html                    # HTML Template
 ├── src/
-│   ├── components/         # React Komponenten
-│   │   ├── ColorPicker.tsx # Erweiterte Farbauswahl mit RGB-Slidern
-│   │   ├── ColorTable.tsx  # Channel-basierte Farbtabelle
-│   │   ├── ColorModal.tsx  # Modal für Farbbearbeitung
-│   │   ├── FileOperations.tsx # Datei-Operationen und Canvas-Größe
-│   │   ├── PixelCanvas.tsx # Multi-Layer Canvas mit Zoom/Pan
-│   │   └── Toolbar.tsx     # Toolbar mit Tools und Grid-Controls
-│   ├── services/           # API Services
-│   │   └── paletteApi.ts   # Palette-Management (Server-Integration)
-│   ├── styles/             # CSS Stylesheets
-│   │   ├── App.css         # Haupt-Styles
-│   │   └── global.css      # Globale Styles
-│   ├── utils/              # Utility Functions
-│   │   └── colorUtils.ts   # Farb-Konvertierungs-Funktionen
-│   ├── App.tsx             # Haupt-App-Komponente mit State-Management
-│   └── index.tsx           # App Entry Point
-├── server.js               # Express Server
-├── webpack.config.js       # Webpack Konfiguration
-├── tsconfig.json           # TypeScript Konfiguration
-└── package.json            # Dependencies und Scripts
+│   ├── components/                   # React Komponenten
+│   │   ├── ColorPicker.tsx          # Erweiterte Farbauswahl mit RGB-Slidern
+│   │   ├── ColorPicker.css          # Styles für Color Picker
+│   │   ├── ColorTable.tsx           # Channel-basierte Farbtabelle
+│   │   ├── ColorTable.css           # Styles für Color Table
+│   │   ├── ColorTableNew.tsx        # Neue Color Table Implementierung
+│   │   ├── ColorTableNew.css        # Styles für neue Color Table
+│   │   ├── ColorTableCards.tsx      # Card-basierte Color Table Darstellung
+│   │   ├── ColorTableCards.css      # Styles für Color Table Cards
+│   │   ├── ColorModal.tsx           # Modal für detaillierte Farbbearbeitung
+│   │   ├── ColorModal.css           # Styles für Color Modal
+│   │   ├── ChannelSlider.tsx        # Kanal-Slider Component
+│   │   ├── FileOperations.tsx       # Datei-Operationen und Canvas-Größe
+│   │   ├── FileOperations.css       # Styles für File Operations
+│   │   ├── PixelCanvas.tsx          # Multi-Layer Canvas mit Zoom/Pan
+│   │   ├── PixelCanvas.css          # Styles für Pixel Canvas
+│   │   ├── Toolbar.tsx              # Toolbar mit Tools und Grid-Controls
+│   │   └── Toolbar.css              # Styles für Toolbar
+│   ├── services/                    # API Services
+│   │   ├── paletteApi.ts            # Palette-Management (Server-Integration)
+│   │   └── colorTableService.ts     # Zentrale Color Table Verwaltung
+│   ├── data/                        # Daten-Dateien
+│   │   └── colorTables.json         # Color Table Konfiguration
+│   ├── utils/                       # Utility Functions
+│   │   └── colorUtils.ts            # Farb-Konvertierungs-Funktionen
+│   ├── styles/                      # CSS Stylesheets
+│   │   ├── App.css                  # Haupt-Styles
+│   │   └── global.css               # Globale Styles
+│   ├── App.tsx                      # Haupt-App-Komponente mit State-Management
+│   └── index.tsx                    # App Entry Point
+├── server.js                        # Express Server für API-Endpoints
+├── webpack.config.js                # Webpack Konfiguration
+├── tsconfig.json                    # TypeScript Konfiguration
+├── package.json                     # Dependencies und Scripts
+├── palettes.json                    # Palette-Konfiguration
+├── start.bat                        # Windows Start-Script
+├── test_color_tables.html           # Test-Datei für Color Tables
+└── test_sync.html                   # Test-Datei für Synchronisation
 ```
 
 ## 🔧 Entwicklung
