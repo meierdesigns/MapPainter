@@ -1,0 +1,375 @@
+"use strict";
+
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import ChannelSlider from './ChannelSlider';
+import { colorTableService, ColorTableEntry } from '../services/colorTableService';
+import './ColorTableCards.css';
+
+// ColorTableEntry is now imported from the service
+
+interface ColorTableCardsProps {
+  colorTable: ColorTableEntry[];
+  onColorTableChange: (table: ColorTableEntry[]) => void;
+  currentLayer: 'red' | 'green' | 'blue';
+  layers: Array<{ palette: Array<{ color: string; name: string }> }>;
+}
+
+const ColorTableCards: React.FC<ColorTableCardsProps> = ({
+  colorTable,
+  onColorTableChange,
+  currentLayer,
+  layers
+}) => {
+  const [previewValues, setPreviewValues] = useState<{[key: string]: {red: number, green: number, blue: number}}>({});
+
+  // Sync color table with palettes using the service - DISABLED to prevent clearing
+  // useEffect(() => {
+  //   console.log('🔧 ColorTableCards: syncColorTableWithPalettes useEffect');
+  //   const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
+  //   const layerPalette = layers[layerIndex]?.palette || [];
+  //   
+  //   console.log('🔧 ColorTableCards: Layer palette data', { 
+  //     layerIndex, 
+  //     layerPalette, 
+  //     paletteLength: layerPalette.length,
+  //     currentLayer 
+  //   });
+  //   
+  //   // Use the service to sync palette to color table
+  //   const newTable = colorTableService.syncPaletteToColorTable(currentLayer, layerPalette);
+  //   
+  //   console.log('🔧 ColorTableCards: Service returned table', { 
+  //     newTable, 
+  //     newTableLength: newTable.length,
+  //     oldTableLength: colorTable.length 
+  //   });
+  //   
+  //   // Update the parent component
+  //   onColorTableChange(newTable);
+  // }, [layers, currentLayer, onColorTableChange]);
+
+  // Hex to RGB and RGB to Hex conversions are now handled by the service
+
+  // Get grayscale color from channel value
+  const getGrayscaleColorFromChannel = useCallback((value: number) => {
+    const clampedValue = Math.max(0, Math.min(255, value));
+    return `rgb(${clampedValue}, ${clampedValue}, ${clampedValue})`;
+  }, []);
+
+  // Convert colorTable prop to the expected format
+  const colorTableData = useMemo(() => {
+    const data = {
+      red: colorTable.filter(entry => entry.id.includes('red')),
+      green: colorTable.filter(entry => entry.id.includes('green')),
+      blue: colorTable.filter(entry => entry.id.includes('blue'))
+    };
+    
+    console.log('🔧 ColorTableCards: Converted colorTable prop to data', { 
+      red: data.red, 
+      green: data.green, 
+      blue: data.blue 
+    });
+    
+    return data;
+  }, [colorTable]);
+
+  // Get colors for a specific channel from colorTableData
+  const getColorsForChannel = (channel: 'red' | 'green' | 'blue') => {
+    return colorTableData[channel] || [];
+  };
+
+  // Handle channel value change (final save)
+  const handleChannelValueChange = useCallback((entryId: string, channel: 'red' | 'green' | 'blue', value: number) => {
+    console.log('🔧 ColorTableCards: handleChannelValueChange', { entryId, channel, value });
+    
+    // Update the colorTable prop through the parent component
+    const updatedTable = colorTable.map(entry => {
+      if (entry.id === entryId) {
+        const updatedEntry = { ...entry };
+        // ONLY update channelValue, NOT the individual color channels
+        updatedEntry.channelValue = value;
+        return updatedEntry;
+      }
+      return entry;
+    });
+    
+    // Update through parent component (this will trigger JSON update)
+    onColorTableChange(updatedTable);
+    
+    // Clear preview values for this entry
+    setPreviewValues(prev => {
+      const updated = { ...prev };
+      if (updated[entryId]) {
+        const newEntry = { ...updated[entryId] };
+        delete newEntry[channel];
+        if (Object.keys(newEntry).length === 0) {
+          delete updated[entryId];
+        } else {
+          updated[entryId] = newEntry;
+        }
+      }
+      return updated;
+    });
+  }, [colorTable, onColorTableChange]);
+
+  // Handle preview change (during dragging)
+  const handlePreviewChange = useCallback((entryId: string, channel: 'red' | 'green' | 'blue', value: number) => {
+    console.log('🔧 ColorTableCards: handlePreviewChange', { entryId, channel, value });
+    
+    setPreviewValues(prev => ({
+      ...prev,
+      [entryId]: {
+        ...prev[entryId],
+        [channel]: value
+      }
+    }));
+  }, []);
+
+  // Get display value (preview or actual)
+  const getDisplayValue = (entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
+    const previewValue = previewValues[entry.id]?.[channel];
+    if (previewValue !== undefined) {
+      return previewValue;
+    }
+    
+    // Use channelValue if this is the channel for this layer
+    const layerFromId = entry.id.split('-')[1] as 'red' | 'green' | 'blue';
+    if (layerFromId === channel && entry.channelValue !== undefined) {
+      return entry.channelValue;
+    }
+    
+    // Fall back to the channel value
+    switch (channel) {
+      case 'red': return entry.redChannel;
+      case 'green': return entry.greenChannel;
+      case 'blue': return entry.blueChannel;
+      default: return 0;
+    }
+  };
+
+  // Get display color (preview or actual) - now shows channel color instead of grayscale
+  const getDisplayColor = (entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
+    const previewValue = previewValues[entry.id]?.[channel];
+    if (previewValue !== undefined) {
+      const channelValue = previewValue;
+      // Return channel color instead of grayscale
+      switch (channel) {
+        case 'red':
+          return `rgb(${channelValue}, 0, 0)`;
+        case 'green':
+          return `rgb(0, ${channelValue}, 0)`;
+        case 'blue':
+          return `rgb(0, 0, ${channelValue})`;
+        default:
+          return getGrayscaleColorFromChannel(channelValue);
+      }
+    }
+    
+    // Use channelValue if this is the channel for this layer
+    const layerFromId = entry.id.split('-')[1] as 'red' | 'green' | 'blue';
+    let channelValue;
+    if (layerFromId === channel && entry.channelValue !== undefined) {
+      channelValue = entry.channelValue;
+    } else {
+      switch (channel) {
+        case 'red': channelValue = entry.redChannel; break;
+        case 'green': channelValue = entry.greenChannel; break;
+        case 'blue': channelValue = entry.blueChannel; break;
+        default: channelValue = 0;
+      }
+    }
+    
+    // Return channel color instead of grayscale
+    switch (channel) {
+      case 'red':
+        return `rgb(${channelValue}, 0, 0)`;
+      case 'green':
+        return `rgb(0, ${channelValue}, 0)`;
+      case 'blue':
+        return `rgb(0, 0, ${channelValue})`;
+      default:
+        return getGrayscaleColorFromChannel(channelValue);
+    }
+  };
+
+  // Get channel color for the label
+  const getChannelColor = useCallback((channel: 'red' | 'green' | 'blue') => {
+    switch (channel) {
+      case 'red': return '#ff6b6b';
+      case 'green': return '#4caf50';
+      case 'blue': return '#2196f3';
+      default: return '#666';
+    }
+  }, []);
+
+  // Check if we have any data in colorTableData
+  const hasData = colorTableData.red.length > 0 || colorTableData.green.length > 0 || colorTableData.blue.length > 0;
+  
+  if (!hasData) {
+    return (
+      <div className="color-table-cards-container">
+        <div className="color-table-header">
+          <h3>Kanäle - Kanal-Zuweisungen</h3>
+          <div className="current-layer">
+            <span className="layer-icon">layers</span>
+            <span>Aktueller Layer: {currentLayer === 'red' ? 'Rot' : currentLayer === 'green' ? 'Grün' : 'Blau'}</span>
+          </div>
+        </div>
+        <div className="no-colors-message">
+          Keine Farben in der Tabelle
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="color-table-cards-container">
+      <div className="color-table-header">
+        <h3>Kanäle - Kanal-Zuweisungen</h3>
+        <div className="current-layer">
+          <span className="layer-icon">layers</span>
+          <span>Aktueller Layer: {currentLayer === 'red' ? 'Rot' : currentLayer === 'green' ? 'Grün' : 'Blau'}</span>
+        </div>
+      </div>
+      
+      <div className="channel-cards">
+        {/* Red Channel Card */}
+        <div className="channel-card">
+          <div className="channel-card-header">
+            <div 
+              className="channel-color-label"
+              style={{ backgroundColor: getChannelColor('red') }}
+            >
+              R
+            </div>
+            <div className="channel-title">Rot-Kanal</div>
+          </div>
+          
+          <div className="channel-card-content">
+            {getColorsForChannel('red').map((entry: ColorTableEntry) => (
+              <div key={`${entry.id}-red`} className="color-entry">
+                <div className="color-info">
+                  <div className="color-name">{entry.name}</div>
+                  <div className="color-preview" style={{ backgroundColor: entry.color }}>
+                    {entry.color}
+                  </div>
+                </div>
+                
+                <div className="channel-controls">
+                  <div 
+                    className="channel-color-preview"
+                    style={{ backgroundColor: getDisplayColor(entry, 'red') }}
+                    title={`Rot-Kanal: ${getDisplayValue(entry, 'red')}`}
+                  />
+                  <ChannelSlider
+                    entryId={entry.id}
+                    channel="red"
+                    value={getDisplayValue(entry, 'red')}
+                    onValueChange={handleChannelValueChange}
+                    onPreviewChange={handlePreviewChange}
+                    title={`Rot-Kanal: ${getDisplayValue(entry, 'red')}`}
+                  />
+                  <span className="channel-value-text">
+                    {getDisplayValue(entry, 'red')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Green Channel Card */}
+        <div className="channel-card">
+          <div className="channel-card-header">
+            <div 
+              className="channel-color-label"
+              style={{ backgroundColor: getChannelColor('green') }}
+            >
+              G
+            </div>
+            <div className="channel-title">Grün-Kanal</div>
+          </div>
+          
+          <div className="channel-card-content">
+            {getColorsForChannel('green').map((entry: ColorTableEntry) => (
+              <div key={`${entry.id}-green`} className="color-entry">
+                <div className="color-info">
+                  <div className="color-name">{entry.name}</div>
+                  <div className="color-preview" style={{ backgroundColor: entry.color }}>
+                    {entry.color}
+                  </div>
+                </div>
+                
+                <div className="channel-controls">
+                  <div 
+                    className="channel-color-preview"
+                    style={{ backgroundColor: getDisplayColor(entry, 'green') }}
+                    title={`Grün-Kanal: ${getDisplayValue(entry, 'green')}`}
+                  />
+                  <ChannelSlider
+                    entryId={entry.id}
+                    channel="green"
+                    value={getDisplayValue(entry, 'green')}
+                    onValueChange={handleChannelValueChange}
+                    onPreviewChange={handlePreviewChange}
+                    title={`Grün-Kanal: ${getDisplayValue(entry, 'green')}`}
+                  />
+                  <span className="channel-value-text">
+                    {getDisplayValue(entry, 'green')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Blue Channel Card */}
+        <div className="channel-card">
+          <div className="channel-card-header">
+            <div 
+              className="channel-color-label"
+              style={{ backgroundColor: getChannelColor('blue') }}
+            >
+              B
+            </div>
+            <div className="channel-title">Blau-Kanal</div>
+          </div>
+          
+          <div className="channel-card-content">
+            {getColorsForChannel('blue').map((entry: ColorTableEntry) => (
+              <div key={`${entry.id}-blue`} className="color-entry">
+                <div className="color-info">
+                  <div className="color-name">{entry.name}</div>
+                  <div className="color-preview" style={{ backgroundColor: entry.color }}>
+                    {entry.color}
+                  </div>
+                </div>
+                
+                <div className="channel-controls">
+                  <div 
+                    className="channel-color-preview"
+                    style={{ backgroundColor: getDisplayColor(entry, 'blue') }}
+                    title={`Blau-Kanal: ${getDisplayValue(entry, 'blue')}`}
+                  />
+                  <ChannelSlider
+                    entryId={entry.id}
+                    channel="blue"
+                    value={getDisplayValue(entry, 'blue')}
+                    onValueChange={handleChannelValueChange}
+                    onPreviewChange={handlePreviewChange}
+                    title={`Blau-Kanal: ${getDisplayValue(entry, 'blue')}`}
+                  />
+                  <span className="channel-value-text">
+                    {getDisplayValue(entry, 'blue')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ColorTableCards;

@@ -1,0 +1,252 @@
+/* Color Modal Styles */
+.color-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.color-modal {
+  background-color: #2a2a2a;
+  border: 2px solid #555;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.color-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #555;
+}
+
+.color-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.color-modal-close {
+  background: none;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.color-modal-close:hover {
+  background-color: #444;
+  color: #fff;
+}
+
+.color-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.color-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-modal-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #cccccc;
+  margin-bottom: 4px;
+}
+
+.color-modal-input {
+  padding: 8px 12px;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.color-modal-input:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.color-modal-channel-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-modal-channel-slider {
+  flex: 1;
+  height: 6px;
+  background: #555;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.color-modal-channel-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #007acc;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #0099ff;
+  transition: all 0.2s ease;
+}
+
+.color-modal-channel-slider::-webkit-slider-thumb:hover {
+  background: #0099ff;
+  transform: scale(1.1);
+}
+
+.color-modal-channel-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #007acc;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #0099ff;
+  transition: all 0.2s ease;
+}
+
+.color-modal-channel-slider::-moz-range-thumb:hover {
+  background: #0099ff;
+  transform: scale(1.1);
+}
+
+.color-modal-channel-value {
+  min-width: 30px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #333;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.color-modal-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background-color: #333;
+  border-radius: 8px;
+  border: 1px solid #555;
+}
+
+.color-modal-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-modal-preview-label {
+  font-size: 12px;
+  color: #aaa;
+  min-width: 80px;
+}
+
+.color-modal-preview-color,
+.color-modal-preview-channel {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: 2px solid #555;
+  flex-shrink: 0;
+}
+
+.color-modal-preview-color {
+  background-color: #000;
+}
+
+.color-modal-preview-channel {
+  background-color: #666;
+}
+
+.color-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #555;
+}
+
+.color-modal-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-modal-button.save {
+  background-color: #007acc;
+  color: white;
+}
+
+.color-modal-button.save:hover {
+  background-color: #0099ff;
+}
+
+.color-modal-button.cancel {
+  background-color: #555;
+  color: #ccc;
+}
+
+.color-modal-button.cancel:hover {
+  background-color: #666;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .color-modal {
+    min-width: 320px;
+    padding: 16px;
+  }
+  
+  .color-modal-title {
+    font-size: 16px;
+  }
+  
+  .color-modal-channel-control {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .color-modal-actions {
+    flex-direction: column;
+  }
+}
