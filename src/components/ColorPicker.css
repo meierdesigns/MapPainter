@@ -1,7 +1,77 @@
+/* CSS Variables for consistent styling */
+:root {
+  --color-button-border: 1px solid #555;
+  --color-button-hover-border: 1px solid #999;
+  --color-button-active-border: 2px solid #007acc;
+  --color-button-hover-scale: scale(1.1);
+  --color-button-transition: all 0.2s ease;
+  --color-button-border-radius: 4px;
+  --color-button-border-radius-small: 3px;
+  --color-button-size: 24px;
+  --color-button-gap-small: 4px;
+  --color-button-gap-medium: 6px;
+  --color-button-gap-large: 8px;
+  --color-button-gap-xlarge: 12px;
+  
+  /* Flexbox utilities */
+  --flex-center: center;
+  --flex-column: column;
+  --flex-row: row;
+}
+
 .color-picker {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+/* Base classes for common button patterns */
+.color-button-base {
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius);
+  cursor: pointer;
+  transition: var(--color-button-transition);
+}
+
+.color-button-hover:hover {
+  border-color: var(--color-button-hover-border);
+  transform: var(--color-button-hover-scale);
+}
+
+.color-button-active.active {
+  border: var(--color-button-active-border);
+  transform: var(--color-button-hover-scale);
+}
+
+/* Flexbox utility classes */
+.flex-center {
+  display: flex;
+  align-items: var(--flex-center);
+  justify-content: var(--flex-center);
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: var(--flex-column);
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: var(--flex-row);
+}
+
+.flex-center-column {
+  display: flex;
+  flex-direction: var(--flex-column);
+  align-items: var(--flex-center);
+  justify-content: var(--flex-center);
+}
+
+.flex-center-row {
+  display: flex;
+  flex-direction: var(--flex-row);
+  align-items: var(--flex-center);
+  justify-content: var(--flex-center);
 }
 
 /* Tab Navigation */
@@ -15,9 +85,9 @@
 .color-picker-tab {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  align-items: var(--flex-center);
+  justify-content: var(--flex-center);
+  gap: var(--color-button-gap-medium);
   padding: 12px 16px;
   background: #333;
   border: none;
@@ -25,7 +95,7 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
   border-bottom: 2px solid transparent;
 }
 
@@ -80,8 +150,8 @@
 
 .color-picker-section {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-direction: var(--flex-column);
+  gap: var(--color-button-gap-xlarge);
 }
 
 .color-picker-title {
@@ -99,10 +169,10 @@
 /* Layer Tab Styles */
 .layer-tabs {
   display: flex;
-  flex-direction: row;
-  gap: 4px;
+  flex-direction: var(--flex-row);
+  gap: var(--color-button-gap-small);
   background-color: #2a2a2a;
-  border: 1px solid #555;
+  border: var(--color-button-border);
   border-radius: 6px;
   padding: 4px;
   width: 100%;
@@ -110,25 +180,25 @@
 
 .layer-tab-item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: var(--flex-column);
+  gap: var(--color-button-gap-medium);
   flex: 1;
   min-width: 0;
 }
 
 .layer-tab {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: var(--flex-center);
+  justify-content: var(--flex-center);
   padding: 4px 2px;
   background-color: #333;
   border: 2px solid #555;
-  border-radius: 4px;
+  border-radius: var(--color-button-border-radius);
   color: #cccccc;
   cursor: pointer;
   font-size: 9px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
   width: 100%;
   min-height: 36px;
   flex: 1;
@@ -177,11 +247,11 @@
   width: 20px;
   height: 20px;
   background-color: #333;
-  border: 1px solid #555;
-  border-radius: 3px;
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius-small);
   color: #cccccc;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
 }
 
 .layer-visibility:hover {
@@ -210,7 +280,7 @@
   overflow-y: auto;
   padding: 8px;
   background-color: #2a2a2a;
-  border: 1px solid #555;
+  border: var(--color-button-border);
   border-radius: 6px;
 }
 
@@ -220,37 +290,37 @@
   gap: 8px;
   padding: 4px;
   background-color: #333;
-  border: 1px solid #555;
-  border-radius: 4px;
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius);
 }
 
 .palette-color-button {
-  width: 24px;
-  height: 24px;
+  width: var(--color-button-size);
+  height: var(--color-button-size);
   border: 2px solid #666;
-  border-radius: 4px;
+  border-radius: var(--color-button-border-radius);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
   flex-shrink: 0;
 }
 
 .palette-color-button:hover {
-  border-color: #999;
-  transform: scale(1.1);
+  border-color: var(--color-button-hover-border);
+  transform: var(--color-button-hover-scale);
 }
 
 .palette-color-button.active {
   border-color: #007acc;
   border-width: 3px;
-  transform: scale(1.1);
+  transform: var(--color-button-hover-scale);
 }
 
 .palette-color-name {
   flex: 1;
   padding: 4px 8px;
   background-color: #444;
-  border: 1px solid #555;
-  border-radius: 4px;
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius);
   color: #ffffff;
   font-size: 12px;
   font-family: 'Source Sans Pro', sans-serif;
@@ -269,11 +339,11 @@
   width: 20px;
   height: 20px;
   background-color: #444;
-  border: 1px solid #555;
-  border-radius: 3px;
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius-small);
   color: #cccccc;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
   flex-shrink: 0;
   margin-right: 4px;
 }
@@ -295,11 +365,11 @@
   width: 20px;
   height: 20px;
   background-color: #444;
-  border: 1px solid #555;
-  border-radius: 3px;
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius-small);
   color: #cccccc;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
   flex-shrink: 0;
 }
 
@@ -338,10 +408,10 @@
   padding: 8px 12px;
   background-color: #333;
   border: 2px dashed #555;
-  border-radius: 4px;
+  border-radius: var(--color-button-border-radius);
   color: #cccccc;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
   font-size: 12px;
   font-weight: 500;
 }
@@ -386,7 +456,7 @@
   flex: 1;
   height: 6px;
   background: #555;
-  border-radius: 3px;
+  border-radius: var(--color-button-border-radius-small);
   outline: none;
   -webkit-appearance: none;
   appearance: none;
@@ -401,7 +471,7 @@
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #0099ff;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
 }
 
 .brush-size-slider::-webkit-slider-thumb:hover {
@@ -416,7 +486,7 @@
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #0099ff;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
 }
 
 .brush-size-slider::-moz-range-thumb:hover {
@@ -454,8 +524,26 @@
   width: 24px;
   height: 24px;
   border: 2px solid #555;
-  border-radius: 4px;
+  border-radius: var(--color-button-border-radius);
   flex-shrink: 0;
+  position: relative;
+}
+
+.hex-input-section .current-color-preview::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 2px;
+  background-color: #ff4444;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.hex-input-section .current-color-preview[style*="transparent"]::after {
+  opacity: 1;
 }
 
 .hex-input {
@@ -463,7 +551,7 @@
   padding: 6px 8px;
   background-color: #2a2a2a;
   border: 2px solid #555;
-  border-radius: 4px;
+  border-radius: var(--color-button-border-radius);
   color: #ffffff;
   font-family: 'Courier New', monospace;
   font-size: 12px;
@@ -472,6 +560,29 @@
 .hex-input:focus {
   outline: none;
   border-color: #007acc;
+}
+
+.clear-color-button {
+  padding: 4px;
+  background-color: #444;
+  border: 1px solid #666;
+  border-radius: var(--color-button-border-radius);
+  color: #ccc;
+  cursor: pointer;
+  transition: var(--color-button-transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-color-button:hover {
+  background-color: #555;
+  color: #fff;
+  border-color: #777;
+}
+
+.clear-color-button .material-icons {
+  font-size: 16px;
 }
 
 .rgb-controls {
@@ -512,7 +623,7 @@
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #0099ff;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
 }
 
 .rgb-slider-input::-webkit-slider-thumb:hover {
@@ -527,7 +638,7 @@
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #0099ff;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
 }
 
 .rgb-slider-input::-moz-range-thumb:hover {
@@ -548,8 +659,9 @@
 .predefined-colors-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px;
+  margin-bottom: 50px;
   background-color: #333;
   border: 2px solid #555;
   border-radius: 8px;
@@ -565,27 +677,26 @@
 }
 
 .predefined-colors-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .predefined-color-button {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #555;
-  border-radius: 4px;
+  width: var(--color-button-size);
+  height: var(--color-button-size);
+  border: var(--color-button-border);
+  border-radius: var(--color-button-border-radius);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--color-button-transition);
 }
 
 .predefined-color-button:hover {
-  border-color: #999;
-  transform: scale(1.1);
+  border-color: var(--color-button-hover-border);
+  transform: var(--color-button-hover-scale);
 }
 
 .predefined-color-button.active {
-  border-color: #007acc;
-  border-width: 3px;
-  transform: scale(1.1);
+  border: var(--color-button-active-border);
+  transform: var(--color-button-hover-scale);
 }

@@ -7,8 +7,8 @@ import ColorTable, { ColorTableEntry } from './ColorTable';
 import './ColorPicker.css';
 
 interface ColorPickerProps {
-  currentColor: string;
-  onColorChange: (color: string) => void;
+  currentColor: string | null;
+  onColorChange: (color: string | null) => void;
   brushSize: number;
   onBrushSizeChange: (size: number) => void;
   currentLayer: LayerType;
@@ -68,6 +68,14 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
     setSelectedPaletteColor(null); // Clear palette selection
   }, [onColorChange]);
 
+  const handleClearColorClick = useCallback(() => {
+    onColorChange(null);
+    setOriginalColor(null);
+    setHasModifiedColor(false);
+    setShowSaveButton(false);
+    setSelectedPaletteColor(null);
+  }, [onColorChange]);
+
   const handlePaletteColorClick = useCallback((color: string) => {
     onColorChange(color);
     setOriginalColor(color); // Set original color to the selected color
@@ -79,17 +87,39 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   // Use utility functions
 
   // Get current RGB values
-  const [currentRgb, setCurrentRgb] = useState(() => hexToRgb(currentColor));
+  const [currentRgb, setCurrentRgb] = useState(() => currentColor ? hexToRgb(currentColor) : { r: 0, g: 0, b: 0 });
   const [hasModifiedColor, setHasModifiedColor] = useState(false);
   const [showSaveButton, setShowSaveButton] = useState(false);
   const [originalColor, setOriginalColor] = useState(currentColor);
   const [selectedPaletteColor, setSelectedPaletteColor] = useState<string | null>(null);
 
-  // Update RGB values when current color changes
+  // Update RGB values when current color changes (but not during slider interaction)
   useEffect(() => {
-    setCurrentRgb(hexToRgb(currentColor));
+    if (currentColor && !hasModifiedColor) {
+      setCurrentRgb(hexToRgb(currentColor));
+    } else if (!currentColor) {
+      setCurrentRgb({ r: 0, g: 0, b: 0 });
+    }
     // Don't reset any states here - let the click handlers manage them
-  }, [currentColor, hexToRgb]);
+  }, [currentColor, hexToRgb, hasModifiedColor]);
+
+  // Update selectedPaletteColor when currentColor changes (e.g., from layer change)
+  useEffect(() => {
+    if (currentColor) {
+      // Check if the current color exists in the current layer's palette
+      const matchingPaletteColor = layerPalette.find(paletteColor => 
+        paletteColor.color.toLowerCase() === currentColor.toLowerCase()
+      );
+      
+      if (matchingPaletteColor) {
+        setSelectedPaletteColor(matchingPaletteColor.color);
+      } else {
+        setSelectedPaletteColor(null);
+      }
+    } else {
+      setSelectedPaletteColor(null);
+    }
+  }, [currentColor, layerPalette]);
 
   // Handle RGB slider changes (only 10-step increments)
   const handleRgbChange = useCallback((component: 'r' | 'g' | 'b', value: number) => {
@@ -164,14 +194,14 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           onClick={() => onTabChange('picker')}
         >
           <span className="material-icons">palette</span>
-          Farbpicker
+          Painter
         </button>
         <button
           className={`color-picker-tab ${activeTab === 'table' ? 'active' : ''}`}
           onClick={() => onTabChange('table')}
         >
           <span className="material-icons">table_chart</span>
-          Farbtabelle
+          Kanäle
         </button>
       </div>
 
@@ -278,26 +308,30 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
               <div className="palette-empty">
                 <span className="material-icons">palette</span>
                 <span>Leere Palette</span>
-                <button
-                  className="palette-save-button"
-                  onClick={handleSaveColorToPalette}
-                  title="Aktuelle Farbe speichern"
-                >
-                  <span className="material-icons">save</span>
-                  Speichern
-                </button>
+                {currentColor && (
+                  <button
+                    className="palette-save-button"
+                    onClick={handleSaveColorToPalette}
+                    title="Aktuelle Farbe speichern"
+                  >
+                    <span className="material-icons">save</span>
+                    Speichern
+                  </button>
+                )}
               </div>
             )}
-            <button
-              className="palette-add-button"
-              onClick={() => {
-                onAddColorToPalette(getLayerIndex(currentLayer), currentColor);
-              }}
-              title="Aktuelle Farbe zur Palette hinzufügen"
-            >
-              <span className="material-icons">add</span>
-              <span>Farbe hinzufügen</span>
-            </button>
+            {currentColor && (
+              <button
+                className="palette-add-button"
+                onClick={() => {
+                  onAddColorToPalette(getLayerIndex(currentLayer), currentColor);
+                }}
+                title="Aktuelle Farbe zur Palette hinzufügen"
+              >
+                <span className="material-icons">add</span>
+                <span>Farbe hinzufügen</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -309,16 +343,24 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           <div className="hex-input-section">
             <div 
               className="current-color-preview"
-              style={{ backgroundColor: currentColor }}
+              style={{ backgroundColor: currentColor || 'transparent' }}
+              title={currentColor || 'Keine Farbe ausgewählt'}
             />
             <input
               id="hex-input"
               type="text"
-              value={currentColor}
+              value={currentColor || ''}
               onChange={(e) => handleHexChange(e.target.value)}
               className="hex-input"
               placeholder="#000000"
             />
+            <button
+              className="clear-color-button"
+              onClick={handleClearColorClick}
+              title="Farbe entfernen"
+            >
+              <span className="material-icons">clear</span>
+            </button>
           </div>
 
           <div className="rgb-controls">
@@ -392,8 +434,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
         <div className="color-table-placeholder">
           <div className="placeholder-content">
             <span className="material-icons">table_chart</span>
-            <h3>Farbtabelle</h3>
-            <p>Die Farbtabelle wird im Hauptbereich angezeigt</p>
+            <h3>Kanäle</h3>
+            <p>Die Kanäle werden im Hauptbereich angezeigt</p>
           </div>
         </div>
       )}
