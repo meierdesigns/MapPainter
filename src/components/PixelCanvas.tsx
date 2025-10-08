@@ -2,21 +2,29 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Tool, PixelData, Layer, LayerType } from '../App';
+import { ColorTableEntry } from './ColorTable';
+import { paletteApi, PixelArtCache } from '../services/paletteApi';
+import { hexToRgb } from '../utils/colorUtils';
 import './PixelCanvas.css';
 
 interface PixelCanvasProps {
   width: number;
   height: number;
   currentTool: Tool;
-  currentColor: string;
+  currentColor: string | null;
   brushSize: number;
   zoom: number;
   showGrid: boolean;
+  gridColor: string;
+  gridThickness: number;
   onHistoryUpdate: (imageData: ImageData) => void;
   onZoomChange: (zoom: number) => void;
   historyData?: ImageData;
   currentLayer: LayerType;
   layers: Layer[];
+  colorTable: ColorTableEntry[];
+  onExportReady?: (exportFunction: () => HTMLCanvasElement | null) => void;
+  onPixelUpdateReady?: (updateFunction: (layerType: LayerType, oldColor: string, newColor: string) => void) => void;
 }
 
 const PixelCanvas: React.FC<PixelCanvasProps> = ({
@@ -27,13 +35,22 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   brushSize,
   zoom,
   showGrid,
+  gridColor,
+  gridThickness,
   onHistoryUpdate,
   onZoomChange,
   historyData,
   currentLayer,
-  layers
+  layers,
+  colorTable,
+  onExportReady,
+  onPixelUpdateReady
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const redCanvasRef = useRef<HTMLCanvasElement>(null);
+  const greenCanvasRef = useRef<HTMLCanvasElement>(null);
+  const blueCanvasRef = useRef<HTMLCanvasElement>(null);
+  const hoverCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isPanning, setIsPanning] = useState<boolean>(false);
@@ -43,8 +60,426 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isMouseDown, setIsMouseDown] = useState<boolean>(false);
   const [mouseButton, setMouseButton] = useState<number>(-1);
+  const [layerImageData, setLayerImageData] = useState<{
+    red: ImageData | null;
+    green: ImageData | null;
+    blue: ImageData | null;
+  }>({
+    red: null,
+    green: null,
+    blue: null
+  });
+  const [hoveredPixels, setHoveredPixels] = useState<Set<string>>(new Set());
+  const [originalPixelColors, setOriginalPixelColors] = useState<Map<string, string>>(new Map());
+  const [isAutoSaving, setIsAutoSaving] = useState<boolean>(false);
 
-  // Initialize canvas
+  // Convert ImageData to base64 string
+  const imageDataToBase64 = useCallback((imageData: ImageData): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png').split(',')[1]; // Remove data:image/png;base64, prefix
+  }, []);
+
+  // Convert base64 string to ImageData
+  const base64ToImageData = useCallback((base64: string, width: number, height: number): ImageData | null => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = `data:image/png;base64,${base64}`;
+      
+      // Return a placeholder for now, the actual conversion will happen in useEffect
+      return ctx.createImageData(width, height);
+    } catch (error) {
+      console.error('Error converting base64 to ImageData:', error);
+      return null;
+    }
+  }, []);
+
+  // Auto-save pixel art to server
+  const autoSavePixelArt = useCallback(async () => {
+    if (isAutoSaving) return;
+    
+    setIsAutoSaving(true);
+    try {
+      const redCanvas = redCanvasRef.current;
+      const greenCanvas = greenCanvasRef.current;
+      const blueCanvas = blueCanvasRef.current;
+      
+      if (!redCanvas || !greenCanvas || !blueCanvas) return;
+      
+      const redCtx = redCanvas.getContext('2d');
+      const greenCtx = greenCanvas.getContext('2d');
+      const blueCtx = blueCanvas.getContext('2d');
+      
+      if (!redCtx || !greenCtx || !blueCtx) return;
+      
+      // Get image data from each layer
+      const redData = redCtx.getImageData(0, 0, width, height);
+      const greenData = greenCtx.getImageData(0, 0, width, height);
+      const blueData = blueCtx.getImageData(0, 0, width, height);
+      
+      // Convert to base64
+      const redBase64 = imageDataToBase64(redData);
+      const greenBase64 = imageDataToBase64(greenData);
+      const blueBase64 = imageDataToBase64(blueData);
+      
+      // Create cache object
+      const cache: PixelArtCache = {
+        layers: {
+          red: redBase64,
+          green: greenBase64,
+          blue: blueBase64
+        },
+        canvasSize: width,
+        lastModified: new Date().toISOString()
+      };
+      
+      // Skip server features if server is not available
+      // This prevents endless connection attempts
+      // await paletteApi.savePixelArtCache(cache);
+    } catch (error) {
+      console.error('Error auto-saving pixel art:', error);
+    } finally {
+      setIsAutoSaving(false);
+    }
+  }, [width, height, imageDataToBase64, isAutoSaving]);
+
+  // Load pixel art from server cache
+  const loadPixelArtFromCache = useCallback(async () => {
+    try {
+      // Skip server features if server is not available
+      // This prevents endless connection attempts
+      return;
+      
+      const cache = await paletteApi.getPixelArtCache();
+      if (!cache || !cache.layers.red || !cache.layers.green || !cache.layers.blue) {
+        return; // No cached data
+      }
+      
+      const redCanvas = redCanvasRef.current;
+      const greenCanvas = greenCanvasRef.current;
+      const blueCanvas = blueCanvasRef.current;
+      
+      if (!redCanvas || !greenCanvas || !blueCanvas) return;
+      
+      const redCtx = redCanvas.getContext('2d');
+      const greenCtx = greenCanvas.getContext('2d');
+      const blueCtx = blueCanvas.getContext('2d');
+      
+      if (!redCtx || !greenCtx || !blueCtx) return;
+      
+      // Load each layer
+      const loadLayer = (ctx: CanvasRenderingContext2D, base64: string) => {
+        return new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0);
+            resolve();
+          };
+          img.onerror = () => resolve(); // Continue even if image fails to load
+          img.src = `data:image/png;base64,${base64}`;
+        });
+      };
+      
+      await Promise.all([
+        loadLayer(redCtx, cache.layers.red!),
+        loadLayer(greenCtx, cache.layers.green!),
+        loadLayer(blueCtx, cache.layers.blue!)
+      ]);
+      
+      // Update layer image data
+      setLayerImageData({
+        red: redCtx.getImageData(0, 0, width, height),
+        green: greenCtx.getImageData(0, 0, width, height),
+        blue: blueCtx.getImageData(0, 0, width, height)
+      });
+      
+    } catch (error) {
+      console.error('Error loading pixel art from cache:', error);
+    }
+  }, [width, height]);
+
+  // Convert current color to grayscale channel value based on current layer
+  const getChannelValueFromColor = useCallback((color: string): number => {
+    // First check if the color exists in the color table
+    const colorTableEntry = colorTable.find(entry => entry.color.toLowerCase() === color.toLowerCase());
+    if (colorTableEntry) {
+      switch (currentLayer) {
+        case 'red': return colorTableEntry.redChannel;
+        case 'green': return colorTableEntry.greenChannel;
+        case 'blue': return colorTableEntry.blueChannel;
+        default: return 0;
+      }
+    }
+
+    // If not found in color table, convert hex to RGB and use the appropriate channel
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    switch (currentLayer) {
+      case 'red': return r;
+      case 'green': return g;
+      case 'blue': return b;
+      default: return 0;
+    }
+  }, [colorTable, currentLayer]);
+
+  // Convert channel value to grayscale color
+  const getGrayscaleColorFromChannel = useCallback((channelValue: number): string => {
+    const hex = channelValue.toString(16).padStart(2, '0');
+    return `#${hex}${hex}${hex}`;
+  }, []);
+
+  // Export function to convert colorful layers to channel-based image
+  const exportToChannels = useCallback(() => {
+    const redCanvas = redCanvasRef.current;
+    const greenCanvas = greenCanvasRef.current;
+    const blueCanvas = blueCanvasRef.current;
+    
+    if (!redCanvas || !greenCanvas || !blueCanvas) return null;
+
+    const redCtx = redCanvas.getContext('2d');
+    const greenCtx = greenCanvas.getContext('2d');
+    const blueCtx = blueCanvas.getContext('2d');
+    
+    if (!redCtx || !greenCtx || !blueCtx) return null;
+
+    // Get image data from each layer
+    const redData = redCtx.getImageData(0, 0, width, height);
+    const greenData = greenCtx.getImageData(0, 0, width, height);
+    const blueData = blueCtx.getImageData(0, 0, width, height);
+
+    // Create output canvas
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = width;
+    outputCanvas.height = height;
+    const outputCtx = outputCanvas.getContext('2d');
+    if (!outputCtx) return null;
+
+    // Create output image data
+    const outputData = outputCtx.createImageData(width, height);
+
+    // Convert each pixel
+    for (let i = 0; i < outputData.data.length; i += 4) {
+      const pixelIndex = i / 4;
+      const x = pixelIndex % width;
+      const y = Math.floor(pixelIndex / width);
+
+      // Get color from each layer
+      const redPixelIndex = (y * width + x) * 4;
+      const redR = redData.data[redPixelIndex];
+      const redG = redData.data[redPixelIndex + 1];
+      const redB = redData.data[redPixelIndex + 2];
+      const redA = redData.data[redPixelIndex + 3];
+
+      const greenR = greenData.data[redPixelIndex];
+      const greenG = greenData.data[redPixelIndex + 1];
+      const greenB = greenData.data[redPixelIndex + 2];
+      const greenA = greenData.data[redPixelIndex + 3];
+
+      const blueR = blueData.data[redPixelIndex];
+      const blueG = blueData.data[redPixelIndex + 1];
+      const blueB = blueData.data[redPixelIndex + 2];
+      const blueA = blueData.data[redPixelIndex + 3];
+
+      // Convert colors to channel values using color table
+      let redChannel = 0;
+      let greenChannel = 0;
+      let blueChannel = 0;
+
+      // Find matching color in color table and get channel values
+      if (redA > 0) {
+        const redColor = `rgb(${redR}, ${redG}, ${redB})`;
+        const colorEntry = colorTable.find(entry => entry.color.toLowerCase() === redColor.toLowerCase());
+        if (colorEntry) {
+          redChannel = colorEntry.redChannel;
+        }
+      }
+
+      if (greenA > 0) {
+        const greenColor = `rgb(${greenR}, ${greenG}, ${greenB})`;
+        const colorEntry = colorTable.find(entry => entry.color.toLowerCase() === greenColor.toLowerCase());
+        if (colorEntry) {
+          greenChannel = colorEntry.greenChannel;
+        }
+      }
+
+      if (blueA > 0) {
+        const blueColor = `rgb(${blueR}, ${blueG}, ${blueB})`;
+        const colorEntry = colorTable.find(entry => entry.color.toLowerCase() === blueColor.toLowerCase());
+        if (colorEntry) {
+          blueChannel = colorEntry.blueChannel;
+        }
+      }
+
+      // Set output pixel
+      outputData.data[i] = redChannel;     // R
+      outputData.data[i + 1] = greenChannel; // G
+      outputData.data[i + 2] = blueChannel;  // B
+      outputData.data[i + 3] = 255;          // A
+    }
+
+    // Draw output data to canvas
+    outputCtx.putImageData(outputData, 0, 0);
+    return outputCanvas;
+  }, [width, height, colorTable]);
+
+  // Initialize layer canvases
+  const initializeLayerCanvas = useCallback((canvasRef: React.RefObject<HTMLCanvasElement>, layerType: 'red' | 'green' | 'blue') => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Set canvas size
+    canvas.width = width;
+    canvas.height = height;
+
+    // Clear canvas (transparent background)
+    ctx.clearRect(0, 0, width, height);
+
+    // Create completely transparent image data
+    const transparentData = ctx.createImageData(width, height);
+    // All pixels are already transparent (alpha = 0) by default
+    
+    setLayerImageData(prev => ({
+      ...prev,
+      [layerType]: transparentData
+    }));
+  }, [width, height]);
+
+  // Get the appropriate canvas ref for the current layer
+  const getCurrentLayerCanvas = useCallback(() => {
+    switch (currentLayer) {
+      case 'red': return redCanvasRef;
+      case 'green': return greenCanvasRef;
+      case 'blue': return blueCanvasRef;
+      default: return redCanvasRef;
+    }
+  }, [currentLayer]);
+
+  // Initialize all layer canvases and load cached data
+  useEffect(() => {
+    initializeLayerCanvas(redCanvasRef, 'red');
+    initializeLayerCanvas(greenCanvasRef, 'green');
+    initializeLayerCanvas(blueCanvasRef, 'blue');
+    
+    // Initialize hover canvas
+    const hoverCanvas = hoverCanvasRef.current;
+    if (hoverCanvas) {
+      const ctx = hoverCanvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        hoverCanvas.width = width;
+        hoverCanvas.height = height;
+        ctx.clearRect(0, 0, width, height);
+      }
+    }
+    
+    // Load cached pixel art after a short delay to ensure canvases are initialized
+    setTimeout(() => {
+      loadPixelArtFromCache();
+    }, 100);
+  }, [initializeLayerCanvas, width, height, loadPixelArtFromCache]);
+
+  // Remove hover effect from pixels
+  const removeHoverEffect = useCallback(() => {
+    const hoverCanvas = hoverCanvasRef.current;
+    if (!hoverCanvas) return;
+
+    const ctx = hoverCanvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Clear the entire hover canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Clear hover state
+    setHoveredPixels(new Set());
+    setOriginalPixelColors(new Map());
+  }, [width, height]);
+
+  // Clear hover effects when layer changes
+  useEffect(() => {
+    removeHoverEffect();
+  }, [currentLayer, removeHoverEffect]);
+
+  // Use utility function for hex to RGB conversion
+
+  // Update all pixels with a specific color in a specific layer
+  const updatePixelsWithColor = useCallback((layerType: LayerType, oldColor: string, newColor: string) => {
+    const canvasRef = layerType === 'red' ? redCanvasRef : layerType === 'green' ? greenCanvasRef : blueCanvasRef;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Get current image data
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    // Convert old color to RGB for comparison
+    const oldRgb = hexToRgb(oldColor);
+    const newRgb = hexToRgb(newColor);
+
+    // Update all pixels with the old color
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      // Check if pixel matches the old color and is not transparent
+      if (a > 0 && r === oldRgb.r && g === oldRgb.g && b === oldRgb.b) {
+        // Update pixel with new color
+        data[i] = newRgb.r;
+        data[i + 1] = newRgb.g;
+        data[i + 2] = newRgb.b;
+        // Keep alpha channel unchanged
+      }
+    }
+
+    // Put the modified image data back to canvas
+    ctx.putImageData(imageData, 0, 0);
+
+    // Update layer image data
+    setLayerImageData(prev => ({
+      ...prev,
+      [layerType]: imageData
+    }));
+  }, [width, height, hexToRgb]);
+
+  // Provide export function to parent
+  useEffect(() => {
+    if (onExportReady) {
+      onExportReady(exportToChannels);
+    }
+  }, [onExportReady, exportToChannels]);
+
+  // Provide pixel update function to parent
+  useEffect(() => {
+    if (onPixelUpdateReady) {
+      onPixelUpdateReady(updatePixelsWithColor);
+    }
+  }, [onPixelUpdateReady, updatePixelsWithColor]);
+
+  // Initialize main canvas (for history and grid)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -56,15 +491,16 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     canvas.width = width;
     canvas.height = height;
 
-    // Fill with white background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
+    // Clear canvas (transparent background)
+    ctx.clearRect(0, 0, width, height);
+
+    // Grid is now drawn as CSS layer, not on canvas
 
     // Save initial state
     const initialData = ctx.getImageData(0, 0, width, height);
     setImageData(initialData);
     onHistoryUpdate(initialData);
-  }, [width, height]); // Removed onHistoryUpdate from dependencies
+  }, [width, height, showGrid, onHistoryUpdate]);
 
   // Restore from history
   useEffect(() => {
@@ -100,23 +536,51 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   }, [zoom]);
 
   const drawPixel = useCallback((x: number, y: number, color: string) => {
-    const canvas = canvasRef.current;
+    const canvas = getCurrentLayerCanvas().current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
+    // Remove hover effect from this pixel if it exists
+    const pixelKey = `${x},${y}`;
+    setHoveredPixels(prev => {
+      if (prev.has(pixelKey)) {
+        setOriginalPixelColors(prevColors => {
+          const newMap = new Map(prevColors);
+          newMap.delete(pixelKey);
+          return newMap;
+        });
+        const newSet = new Set(prev);
+        newSet.delete(pixelKey);
+        return newSet;
+      }
+      return prev;
+    });
+
+    // Use the original color directly (no conversion to grayscale)
     ctx.fillStyle = color;
     ctx.fillRect(x, y, 1, 1);
-  }, []);
+
+    // Update layer image data
+    const data = ctx.getImageData(0, 0, width, height);
+    setLayerImageData(prev => ({
+      ...prev,
+      [currentLayer]: data
+    }));
+    
+    // Auto-save after drawing
+    autoSavePixelArt();
+  }, [getCurrentLayerCanvas, width, height, currentLayer, autoSavePixelArt]);
 
   const drawBrush = useCallback((x: number, y: number, color: string, size: number) => {
-    const canvas = canvasRef.current;
+    const canvas = getCurrentLayerCanvas().current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
+    // Use the original color directly (no conversion to grayscale)
     ctx.fillStyle = color;
     
     // For size 1: draw 1 pixel
@@ -131,20 +595,53 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         const py = startY + dy;
         
         if (px >= 0 && px < width && py >= 0 && py < height) {
+          // Remove hover effect from this pixel if it exists
+          const pixelKey = `${px},${py}`;
+          setHoveredPixels(prev => {
+            if (prev.has(pixelKey)) {
+              setOriginalPixelColors(prevColors => {
+                const newMap = new Map(prevColors);
+                newMap.delete(pixelKey);
+                return newMap;
+              });
+              const newSet = new Set(prev);
+              newSet.delete(pixelKey);
+              return newSet;
+            }
+            return prev;
+          });
+          
+          // Set pixel with full opacity
           ctx.fillRect(px, py, 1, 1);
         }
       }
     }
-  }, [width, height]);
 
-  const drawHoverPreview = useCallback((x: number, y: number, size: number) => {
-    const canvas = canvasRef.current;
+    // Update layer image data
+    const data = ctx.getImageData(0, 0, width, height);
+    setLayerImageData(prev => ({
+      ...prev,
+      [currentLayer]: data
+    }));
+    
+    // Auto-save after drawing
+    autoSavePixelArt();
+  }, [width, height, getCurrentLayerCanvas, currentLayer, autoSavePixelArt]);
+
+  const erasePixel = useCallback((x: number, y: number, size: number) => {
+    const canvas = getCurrentLayerCanvas().current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Use same calculation as drawBrush
+    // Get current image data
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    // For size 1: erase 1 pixel
+    // For size 2: erase 2x2 pixels
+    // For size 3: erase 3x3 pixels
     const startX = x - Math.floor((size - 1) / 2);
     const startY = y - Math.floor((size - 1) / 2);
     
@@ -154,18 +651,225 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         const py = startY + dy;
         
         if (px >= 0 && px < width && py >= 0 && py < height) {
-          // Draw bright yellow highlight with stronger opacity
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
-          ctx.fillRect(px, py, 1, 1);
+          // Remove hover effect from this pixel if it exists
+          const pixelKey = `${px},${py}`;
+          setHoveredPixels(prev => {
+            if (prev.has(pixelKey)) {
+              setOriginalPixelColors(prevColors => {
+                const newMap = new Map(prevColors);
+                newMap.delete(pixelKey);
+                return newMap;
+              });
+              const newSet = new Set(prev);
+              newSet.delete(pixelKey);
+              return newSet;
+            }
+            return prev;
+          });
           
-          // Add a subtle border for better visibility
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-          ctx.lineWidth = 0.1;
-          ctx.strokeRect(px, py, 1, 1);
+          // Calculate pixel index in image data
+          const pixelIndex = (py * width + px) * 4;
+          
+          // Set alpha channel to 0 (transparent)
+          data[pixelIndex + 3] = 0;
         }
       }
     }
-  }, [width, height]);
+
+    // Put the modified image data back to canvas
+    ctx.putImageData(imageData, 0, 0);
+
+    // Update layer image data
+    setLayerImageData(prev => ({
+      ...prev,
+      [currentLayer]: imageData
+    }));
+    
+    // Auto-save after erasing
+    autoSavePixelArt();
+  }, [width, height, getCurrentLayerCanvas, currentLayer, autoSavePixelArt]);
+
+  // Get pixel color from current layer
+  const getPixelColorFromLayer = useCallback((x: number, y: number): string => {
+    const canvas = getCurrentLayerCanvas().current;
+    if (!canvas) return 'transparent';
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return 'transparent';
+
+    const imageData = ctx.getImageData(x, y, 1, 1);
+    const data = imageData.data;
+    
+    if (data[3] === 0) return 'transparent';
+    
+    return `rgb(${data[0]}, ${data[1]}, ${data[2]})`;
+  }, [getCurrentLayerCanvas]);
+
+  // Get combined pixel color from all visible layers
+  const getCombinedPixelColor = useCallback((x: number, y: number): string => {
+    // Check if any layer has content at this pixel
+    let hasContent = false;
+    
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      if (!layer.visible) continue;
+
+      const layerCanvas = i === 0 ? redCanvasRef.current : 
+                         i === 1 ? greenCanvasRef.current : 
+                         blueCanvasRef.current;
+      
+      if (!layerCanvas) continue;
+
+      const layerCtx = layerCanvas.getContext('2d');
+      if (!layerCtx) continue;
+
+      const layerImageData = layerCtx.getImageData(x, y, 1, 1);
+      const layerData = layerImageData.data;
+      
+      if (layerData[3] > 0) {
+        hasContent = true;
+        break;
+      }
+    }
+    
+    // If no layer has content, return transparent (so gradient shows through)
+    if (!hasContent) {
+      return 'transparent';
+    }
+
+    // Create a temporary canvas to composite all layers
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 1;
+    tempCanvas.height = 1;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return 'transparent';
+
+    // Start with transparent background
+    tempCtx.clearRect(0, 0, 1, 1);
+
+    // Composite all visible layers
+    layers.forEach((layer, index) => {
+      if (!layer.visible) return;
+
+      const layerCanvas = index === 0 ? redCanvasRef.current : 
+                         index === 1 ? greenCanvasRef.current : 
+                         blueCanvasRef.current;
+      
+      if (!layerCanvas) return;
+
+      const layerCtx = layerCanvas.getContext('2d');
+      if (!layerCtx) return;
+
+      const layerImageData = layerCtx.getImageData(x, y, 1, 1);
+      const layerData = layerImageData.data;
+      
+      if (layerData[3] > 0) {
+        // Apply layer opacity
+        const opacity = (layer.opacity || 1) * (layerData[3] / 255);
+        
+        // Composite the layer
+        tempCtx.globalAlpha = opacity;
+        tempCtx.fillStyle = `rgb(${layerData[0]}, ${layerData[1]}, ${layerData[2]})`;
+        tempCtx.fillRect(0, 0, 1, 1);
+        tempCtx.globalAlpha = 1;
+      }
+    });
+
+    // Get the final color
+    const finalImageData = tempCtx.getImageData(0, 0, 1, 1);
+    const finalData = finalImageData.data;
+    
+    // If the final result is transparent, return transparent
+    if (finalData[3] === 0) {
+      return 'transparent';
+    }
+    
+    return `rgb(${finalData[0]}, ${finalData[1]}, ${finalData[2]})`;
+  }, [layers]);
+
+  // Apply hover effect to pixels
+  const applyHoverEffect = useCallback((x: number, y: number, size: number) => {
+    const canvas = getCurrentLayerCanvas().current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    const startX = x - Math.floor((size - 1) / 2);
+    const startY = y - Math.floor((size - 1) / 2);
+    const newHoveredPixels = new Set<string>();
+    const newOriginalColors = new Map<string, string>();
+    
+    for (let dy = 0; dy < size; dy++) {
+      for (let dx = 0; dx < size; dx++) {
+        const px = startX + dx;
+        const py = startY + dy;
+        
+        if (px >= 0 && px < width && py >= 0 && py < height) {
+          const pixelKey = `${px},${py}`;
+          
+          // Get original color
+          const originalColor = getPixelColorFromLayer(px, py);
+          newOriginalColors.set(pixelKey, originalColor);
+          
+          // Apply hover color (current color)
+          const hoverColor = currentColor;
+          ctx.fillStyle = hoverColor;
+          ctx.fillRect(px, py, 1, 1);
+          
+          newHoveredPixels.add(pixelKey);
+        }
+      }
+    }
+    
+    // Update state using functional updates
+    setHoveredPixels(prev => new Set([...prev, ...newHoveredPixels]));
+    setOriginalPixelColors(prev => new Map([...prev, ...newOriginalColors]));
+  }, [getCurrentLayerCanvas, width, height, currentColor, getPixelColorFromLayer]);
+
+  const showHoverEffect = useCallback((x: number, y: number, size: number) => {
+    // Apply hover effect on hover canvas
+    const hoverCanvas = hoverCanvasRef.current;
+    if (!hoverCanvas) return;
+
+    const ctx = hoverCanvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    const startX = x - Math.floor((size - 1) / 2);
+    const startY = y - Math.floor((size - 1) / 2);
+    const newHoveredPixels = new Set<string>();
+    
+    for (let dy = 0; dy < size; dy++) {
+      for (let dx = 0; dx < size; dx++) {
+        const px = startX + dx;
+        const py = startY + dy;
+        
+        if (px >= 0 && px < width && py >= 0 && py < height) {
+          const pixelKey = `${px},${py}`;
+          
+          // Apply hover color on hover canvas (semi-transparent)
+          const hoverColor = currentColor;
+          ctx.fillStyle = hoverColor;
+          ctx.globalAlpha = 0.7; // Semi-transparent hover effect
+          ctx.fillRect(px, py, 1, 1);
+          ctx.globalAlpha = 1.0;
+          
+          newHoveredPixels.add(pixelKey);
+        }
+      }
+    }
+    
+    // Update state
+    setHoveredPixels(prev => new Set([...prev, ...newHoveredPixels]));
+  }, [width, height, currentColor]);
+
+  const drawHoverPreview = useCallback((x: number, y: number, size: number) => {
+    // Remove any existing hover effects first
+    removeHoverEffect();
+    
+    // Apply new hover effect
+    showHoverEffect(x, y, size);
+  }, [removeHoverEffect, showHoverEffect]);
 
   const drawRectanglePreview = useCallback((x: number, y: number, endX?: number, endY?: number) => {
     const canvas = canvasRef.current;
@@ -202,17 +906,9 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   }, []);
 
   const clearHoverPreview = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-
-    // Redraw the canvas to remove hover preview
-    if (imageData) {
-      ctx.putImageData(imageData, 0, 0);
-    }
-  }, [imageData]);
+    // Remove hover effects from pixels
+    removeHoverEffect();
+  }, [removeHoverEffect]);
 
   const getPixelColor = useCallback((x: number, y: number): string => {
     if (!imageData) return '#000000';
@@ -263,28 +959,39 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   }, [width, height, getPixelColor, drawPixel]);
 
   const drawLine = useCallback((x1: number, y1: number, x2: number, y2: number, color: string) => {
-    const canvas = canvasRef.current;
+    const canvas = getCurrentLayerCanvas().current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
+    // Use the original color directly (no conversion to grayscale)
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x1 + 0.5, y1 + 0.5);
     ctx.lineTo(x2 + 0.5, y2 + 0.5);
     ctx.stroke();
-  }, []);
+
+    // Update layer image data
+    const data = ctx.getImageData(0, 0, width, height);
+    setLayerImageData(prev => ({
+      ...prev,
+      [currentLayer]: data
+    }));
+    
+    // Auto-save after drawing line
+    autoSavePixelArt();
+  }, [getCurrentLayerCanvas, width, height, currentLayer, autoSavePixelArt]);
 
   const drawRectangle = useCallback((x1: number, y1: number, x2: number, y2: number, color: string) => {
-    const canvas = canvasRef.current;
+    const canvas = getCurrentLayerCanvas().current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Calculate rectangle bounds (same logic as preview)
+    // Use the original color directly (no conversion to grayscale)
     const startX = Math.min(x1, x2);
     const startY = Math.min(y1, y2);
     const width = Math.abs(x2 - x1) + 1;
@@ -293,7 +1000,17 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     // Draw filled rectangle
     ctx.fillStyle = color;
     ctx.fillRect(startX, startY, width, height);
-  }, []);
+
+    // Update layer image data
+    const data = ctx.getImageData(0, 0, width, height);
+    setLayerImageData(prev => ({
+      ...prev,
+      [currentLayer]: data
+    }));
+    
+    // Auto-save after drawing rectangle
+    autoSavePixelArt();
+  }, [getCurrentLayerCanvas, currentLayer, autoSavePixelArt]);
 
   const saveState = useCallback(() => {
     const canvas = canvasRef.current;
@@ -339,17 +1056,21 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
         switch (currentTool) {
           case 'brush':
-            drawBrush(x, y, currentColor, brushSize);
+            if (currentColor) {
+              drawBrush(x, y, currentColor, brushSize);
+            }
             break;
           case 'eraser':
-            drawBrush(x, y, '#ffffff', brushSize);
+            erasePixel(x, y, brushSize);
             break;
           case 'eyedropper':
             const color = getPixelColor(x, y);
             // This would need to be passed up to parent to update currentColor
             break;
           case 'fill':
-            floodFill(x, y, currentColor);
+            if (currentColor) {
+              floodFill(x, y, currentColor);
+            }
             break;
           case 'rectangle':
             // Rectangle will be drawn on mouse up - save start position
@@ -367,7 +1088,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         }
       }
     }
-  }, [getPixelPosition, currentTool, currentColor, brushSize, drawBrush, getPixelColor, floodFill, saveState, clearHoverPreview]);
+  }, [getPixelPosition, currentTool, currentColor, brushSize, drawBrush, erasePixel, getPixelColor, floodFill, saveState, clearHoverPreview]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLElement>) => {
     if (!isMouseDown || !lastPosition) return;
@@ -397,10 +1118,12 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
         switch (currentTool) {
           case 'brush':
-            drawBrush(x, y, currentColor, brushSize);
+            if (currentColor) {
+              drawBrush(x, y, currentColor, brushSize);
+            }
             break;
           case 'eraser':
-            drawBrush(x, y, '#ffffff', brushSize);
+            erasePixel(x, y, brushSize);
             break;
           case 'line':
             // Preview line (would need additional canvas layer)
@@ -430,7 +1153,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     }
 
     setLastPosition({ x: currentX, y: currentY });
-  }, [isMouseDown, mouseButton, isPanning, isDrawing, lastPosition, getPixelPosition, currentTool, currentColor, brushSize, drawBrush, width, height, clearHoverPreview, startPixelPosition, drawRectanglePreview]);
+  }, [isMouseDown, mouseButton, isPanning, isDrawing, lastPosition, getPixelPosition, currentTool, currentColor, brushSize, drawBrush, erasePixel, width, height, clearHoverPreview, startPixelPosition, drawRectanglePreview]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent<HTMLElement>) => {
     // Clear hover preview
@@ -447,10 +1170,14 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         
         switch (currentTool) {
           case 'rectangle':
-            drawRectangle(startX, startY, endX, endY, currentColor);
+            if (currentColor) {
+              drawRectangle(startX, startY, endX, endY, currentColor);
+            }
             break;
           case 'line':
-            drawLine(startX, startY, endX, endY, currentColor);
+            if (currentColor) {
+              drawLine(startX, startY, endX, endY, currentColor);
+            }
             break;
         }
       }
@@ -476,23 +1203,23 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
       switch (currentTool) {
         case 'brush':
         case 'eraser':
-          drawHoverPreview(pos.x, pos.y, brushSize);
+          showHoverEffect(pos.x, pos.y, brushSize);
           break;
         case 'fill':
         case 'eyedropper':
-          drawHoverPreview(pos.x, pos.y, 1);
+          showHoverEffect(pos.x, pos.y, 1);
           break;
         case 'rectangle':
           drawRectanglePreview(pos.x, pos.y);
           break;
         case 'line':
-          drawHoverPreview(pos.x, pos.y, 1);
+          showHoverEffect(pos.x, pos.y, 1);
           break;
         default:
-          drawHoverPreview(pos.x, pos.y, 1);
+          showHoverEffect(pos.x, pos.y, 1);
       }
     }
-  }, [getPixelPosition, currentTool, brushSize, drawHoverPreview, drawRectanglePreview, width, height]);
+  }, [getPixelPosition, currentTool, brushSize, showHoverEffect, drawRectanglePreview, width, height]);
 
   const handleMouseLeave = useCallback(() => {
     // Clear hover preview
@@ -546,30 +1273,30 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   const handleWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
     event.preventDefault();
     const delta = event.deltaY > 0 ? -0.5 : 0.5;
-    const newZoom = Math.max(0.5, Math.min(30, zoom + delta));
+    const newZoom = Math.max(0.5, Math.min(32, zoom + delta));
     
     onZoomChange(newZoom);
   }, [zoom, onZoomChange]);
 
   // Add native wheel event listener to handle preventDefault properly
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     const handleNativeWheel = (event: WheelEvent) => {
       event.preventDefault();
       event.stopPropagation();
       
       const delta = event.deltaY > 0 ? -0.5 : 0.5;
-      const newZoom = Math.max(0.5, Math.min(30, zoom + delta));
+      const newZoom = Math.max(0.5, Math.min(32, zoom + delta));
       
       onZoomChange(newZoom);
     };
 
-    canvas.addEventListener('wheel', handleNativeWheel, { passive: false });
+    container.addEventListener('wheel', handleNativeWheel, { passive: false });
 
     return () => {
-      canvas.removeEventListener('wheel', handleNativeWheel);
+      container.removeEventListener('wheel', handleNativeWheel);
     };
   }, [zoom, onZoomChange]);
 
@@ -582,6 +1309,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
       onMouseMove={handleMouseMoveWithPreview}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
+      onWheel={handleWheel}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="canvas-wrapper" style={{ 
@@ -590,6 +1318,28 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         justifyContent: 'center',
         alignItems: 'center'
       }}>
+        {/* Grid layer - not zoomed, always 1px on screen */}
+        {showGrid && (
+          <div
+            className="pixel-canvas-grid"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: `translate(-50%, -50%) translate(${panOffset.x}px, ${panOffset.y}px)`,
+              width: width * zoom,
+              height: height * zoom,
+              zIndex: 1,
+               backgroundImage: `
+                 linear-gradient(to right, ${gridColor} ${gridThickness}px, transparent ${gridThickness}px),
+                 linear-gradient(to bottom, ${gridColor} ${gridThickness}px, transparent ${gridThickness}px)
+               `,
+              backgroundSize: `${zoom}px ${zoom}px`,
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+        
         <div style={{
           position: 'relative',
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
@@ -597,18 +1347,104 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
           width: width,
           height: height
         }}>
+          {/* Gradient background layer */}
+          <div
+            className="pixel-canvas pixel-canvas-gradient"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: width,
+              height: height,
+              zIndex: 0
+            }}
+          />
+          
+          {/* Background canvas (white) */}
           <canvas
             ref={canvasRef}
-            className="pixel-canvas"
+            className="pixel-canvas pixel-canvas-background"
             style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: width,
               height: height,
               imageRendering: 'pixelated' as const,
               border: showGrid ? '1px solid #666' : '1px solid #444',
-              display: 'block'
+              display: 'block',
+              zIndex: 1
             }}
             onMouseEnter={handleMouseEnter}
-            onWheel={handleWheel}
+          />
+          
+          {/* Red Layer (bottom) */}
+          <canvas
+            ref={redCanvasRef}
+            className="pixel-canvas pixel-canvas-layer"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: width,
+              height: height,
+              imageRendering: 'pixelated' as const,
+              display: layers[0]?.visible ? 'block' : 'none',
+              opacity: layers[0]?.opacity || 1,
+              zIndex: 2
+            }}
+          />
+          
+          {/* Green Layer (middle) */}
+          <canvas
+            ref={greenCanvasRef}
+            className="pixel-canvas pixel-canvas-layer"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: width,
+              height: height,
+              imageRendering: 'pixelated' as const,
+              display: layers[1]?.visible ? 'block' : 'none',
+              opacity: layers[1]?.opacity || 1,
+              zIndex: 3
+            }}
+          />
+          
+          {/* Blue Layer (top) */}
+          <canvas
+            ref={blueCanvasRef}
+            className="pixel-canvas pixel-canvas-layer"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: width,
+              height: height,
+              imageRendering: 'pixelated' as const,
+              display: layers[2]?.visible ? 'block' : 'none',
+              opacity: layers[2]?.opacity || 1,
+              zIndex: 4
+            }}
+          />
+          
+          {/* Hover Layer (topmost) */}
+          <canvas
+            ref={hoverCanvasRef}
+            className="pixel-canvas pixel-canvas-layer"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: width,
+              height: height,
+              imageRendering: 'pixelated' as const,
+              display: 'block',
+              opacity: 1,
+              zIndex: 5,
+              pointerEvents: 'none'
+            }}
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use strict";
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tool } from '../App';
 import './Toolbar.css';
 
@@ -10,7 +10,11 @@ interface ToolbarProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   showGrid: boolean;
+  gridColor: string;
+  gridThickness: number;
   onGridToggle: () => void;
+  onGridColorChange: (color: string) => void;
+  onGridThicknessChange: (thickness: number) => void;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -23,12 +27,36 @@ const Toolbar: React.FC<ToolbarProps> = ({
   zoom,
   onZoomChange,
   showGrid,
+  gridColor,
+  gridThickness,
   onGridToggle,
+  onGridColorChange,
+  onGridThicknessChange,
   onUndo,
   onRedo,
   canUndo,
   canRedo
 }) => {
+  const [showGridColorPicker, setShowGridColorPicker] = useState(false);
+  const gridColorPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close color picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (gridColorPickerRef.current && !gridColorPickerRef.current.contains(event.target as Node)) {
+        setShowGridColorPicker(false);
+      }
+    };
+
+    if (showGridColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showGridColorPicker]);
+
   const tools: { tool: Tool; icon: string; label: string }[] = [
     { tool: 'brush', icon: 'brush', label: 'Pinsel' },
     { tool: 'eraser', icon: 'clear', label: 'Radierer' },
@@ -69,22 +97,71 @@ const Toolbar: React.FC<ToolbarProps> = ({
           <span className="zoom-value">{Math.round(zoom * 100)}%</span>
           <button
             className="zoom-button"
-            onClick={() => onZoomChange(Math.min(30, zoom + 0.5))}
-            disabled={zoom >= 30}
+            onClick={() => onZoomChange(Math.min(32, zoom + 0.5))}
+            disabled={zoom >= 32}
           >
             <span className="material-icons">zoom_in</span>
           </button>
         </div>
 
         <div className="view-controls">
-          <button
-            className={`view-button ${showGrid ? 'active' : ''}`}
-            onClick={onGridToggle}
-            title="Raster anzeigen/verstecken"
-          >
-            <span className="material-icons">grid_on</span>
-            <span>Raster</span>
-          </button>
+          <div className="grid-controls">
+            <button
+              className={`view-button ${showGrid ? 'active' : ''}`}
+              onClick={onGridToggle}
+              title="Raster anzeigen/verstecken"
+            >
+              <span className="material-icons">grid_on</span>
+            </button>
+            {showGrid && (
+              <div className="grid-color-control">
+                <button
+                  className="grid-color-button"
+                  onClick={() => setShowGridColorPicker(!showGridColorPicker)}
+                  title="Rasterfarbe ändern"
+                >
+                  <div 
+                    className="grid-color-preview"
+                    style={{ backgroundColor: gridColor }}
+                  />
+                  <span className="material-icons">arrow_drop_down</span>
+                </button>
+                {showGridColorPicker && (
+                  <div className="grid-color-picker" ref={gridColorPickerRef}>
+                    <input
+                      type="color"
+                      value={gridColor}
+                      onChange={(e) => onGridColorChange(e.target.value)}
+                      className="grid-color-input"
+                    />
+                    <div className="grid-color-presets">
+                      {['#b3d9ff', '#ff9999', '#99ff99', '#ffff99', '#ff99ff', '#99ffff', '#cccccc', '#666666'].map(color => (
+                        <button
+                          key={color}
+                          className="grid-color-preset"
+                          style={{ backgroundColor: color }}
+                          onClick={() => onGridColorChange(color)}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                    <div className="grid-thickness-control">
+                      <label className="grid-thickness-label">Stärke:</label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        value={gridThickness}
+                        onChange={(e) => onGridThicknessChange(parseInt(e.target.value))}
+                        className="grid-thickness-slider"
+                      />
+                      <span className="grid-thickness-value">{gridThickness}px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="edit-controls">
