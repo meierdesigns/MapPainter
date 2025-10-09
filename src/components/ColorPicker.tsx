@@ -29,6 +29,7 @@ interface ColorPickerProps {
   };
   activeTab: 'picker' | 'table';
   onTabChange: (tab: 'picker' | 'table') => void;
+  onAutoAddColorToPalette?: (color: string) => void;
 }
 
 const ColorPicker: React.FC<ColorPickerProps> = ({
@@ -49,7 +50,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   onColorTableChange,
   layerPalettes,
   activeTab,
-  onTabChange
+  onTabChange,
+  onAutoAddColorToPalette
 }) => {
 
   const predefinedColors = [
@@ -69,8 +71,9 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   }, [onColorChange]);
 
   const handleClearColorClick = useCallback(() => {
-    onColorChange(null);
-    setOriginalColor(null);
+    // Set to black instead of null to allow painting
+    onColorChange('#000000');
+    setOriginalColor('#000000');
     setHasModifiedColor(false);
     setShowSaveButton(false);
     setSelectedPaletteColor(null);
@@ -92,94 +95,155 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   const [showSaveButton, setShowSaveButton] = useState(false);
   const [originalColor, setOriginalColor] = useState(currentColor);
   const [selectedPaletteColor, setSelectedPaletteColor] = useState<string | null>(null);
+  
+  // Local state for editing palette color names
+  const [editingNames, setEditingNames] = useState<{ [colorId: string]: string }>({});
 
   // Update RGB values when current color changes (but not during slider interaction)
+  // Single useEffect to handle both RGB and palette selection updates
   useEffect(() => {
+    // Update RGB values
     if (currentColor && !hasModifiedColor) {
       setCurrentRgb(hexToRgb(currentColor));
     } else if (!currentColor) {
       setCurrentRgb({ r: 0, g: 0, b: 0 });
     }
-    // Don't reset any states here - let the click handlers manage them
-  }, [currentColor, hexToRgb, hasModifiedColor]);
-
-  // Update selectedPaletteColor when currentColor changes (e.g., from layer change)
-  useEffect(() => {
+    
+    // Update selected palette color
     if (currentColor) {
       // Check if the current color exists in the current layer's palette
-      const matchingPaletteColor = layerPalette.find(paletteColor => 
-        paletteColor.color.toLowerCase() === currentColor.toLowerCase()
-      );
+      const matchingPaletteColor = layerPalette.find(p => p.color === currentColor);
       
       if (matchingPaletteColor) {
         setSelectedPaletteColor(matchingPaletteColor.color);
+        console.log('🎨 Palette color selected:', matchingPaletteColor.color);
       } else {
         setSelectedPaletteColor(null);
+        console.log('🎨 Current color not found in palette:', currentColor);
       }
     } else {
       setSelectedPaletteColor(null);
+      console.log('🎨 No color selected');
     }
-  }, [currentColor, layerPalette]);
+  }, [currentColor, layerPalette, hasModifiedColor, hexToRgb]);
 
   // Handle RGB slider changes (only 10-step increments)
-  const handleRgbChange = useCallback((component: 'r' | 'g' | 'b', value: number) => {
+  const handleRgbChange = useCallback((component: 'r' | 'g' | 'b' | 'all', value: number) => {
     // Round to nearest 10
     const roundedValue = Math.round(value / 10) * 10;
     // Clamp value to valid range
     const clampedValue = Math.max(0, Math.min(255, roundedValue));
-    const newRgb = { ...currentRgb, [component]: clampedValue };
+    
+    let newRgb;
+    if (component === 'all') {
+      // Set all RGB components to the same value (grayscale)
+      newRgb = { r: clampedValue, g: clampedValue, b: clampedValue };
+    } else {
+      // Set individual component
+      newRgb = { ...currentRgb, [component]: clampedValue };
+    }
+    
     setCurrentRgb(newRgb);
     setHasModifiedColor(true); // Mark color as modified
     setShowSaveButton(true); // Show save button when RGB sliders are used
     const newHex = rgbToHex(newRgb.r, newRgb.g, newRgb.b);
-    onColorChange(newHex);
-    // Keep palette selection if it exists
-  }, [currentRgb, rgbToHex, onColorChange]);
+    
+    // Update the selected palette color if one is selected
+    if (selectedPaletteColor) {
+      // Find the palette color and update it
+      const layerIndex = getLayerIndex(currentLayer);
+      const paletteColor = layerPalette.find(p => p.color === selectedPaletteColor);
+      if (paletteColor) {
+        onUpdatePaletteColor(layerIndex, paletteColor.id, { color: newHex });
+        // Set the new color as current color
+        onColorChange(newHex);
+        console.log('🎨 Updated selected palette color:', newHex);
+      }
+    } else {
+      // No palette color selected, just update current color for preview
+      onColorChange(newHex);
+      console.log('🎨 RGB slider changed (no palette selection):', { component, value, newHex });
+    }
+  }, [currentRgb, rgbToHex, selectedPaletteColor, layerPalette, currentLayer, onUpdatePaletteColor, onColorChange]);
 
   // Handle hex input change
   const handleHexChange = useCallback((hex: string) => {
     if (/^#[0-9A-F]{6}$/i.test(hex)) {
-      onColorChange(hex);
-      setOriginalColor(hex); // Set original color to the hex input
-      setHasModifiedColor(true); // Mark as modified when changing hex input
-      setShowSaveButton(true); // Show save button when hex input is used
-      setSelectedPaletteColor(null); // Clear palette selection
+      setOriginalColor(hex);
+      setHasModifiedColor(true);
+      setShowSaveButton(true);
+      // Update RGB values
+      const rgb = hexToRgb(hex);
+      setCurrentRgb(rgb);
+      
+      // Update the selected palette color if one is selected
+      if (selectedPaletteColor) {
+        const layerIndex = getLayerIndex(currentLayer);
+        const paletteColor = layerPalette.find(p => p.color === selectedPaletteColor);
+        if (paletteColor) {
+          onUpdatePaletteColor(layerIndex, paletteColor.id, { color: hex });
+          // Set the new color as current color
+          onColorChange(hex);
+          console.log('🎨 Updated selected palette color via hex input:', hex);
+        }
+      } else {
+        // No palette color selected, just update current color for preview
+        onColorChange(hex);
+        console.log('🎨 Hex input changed (no palette selection):', hex);
+      }
     }
-  }, [onColorChange]);
+  }, [hexToRgb, selectedPaletteColor, layerPalette, currentLayer, onUpdatePaletteColor, onColorChange]);
+
+  // Auto-add color to palette when painting with RGB color
+  const autoAddColorToPalette = useCallback(() => {
+    if (onAutoAddColorToPalette) {
+      const newHex = rgbToHex(currentRgb.r, currentRgb.g, currentRgb.b);
+      onAutoAddColorToPalette(newHex);
+    }
+  }, [currentRgb, onAutoAddColorToPalette, rgbToHex]);
+
+  // Get current RGB color as hex
+  const getCurrentRgbColor = useCallback(() => {
+    return rgbToHex(currentRgb.r, currentRgb.g, currentRgb.b);
+  }, [currentRgb, rgbToHex]);
 
   // Handle saving current color to palette
   const handleSaveColorToPalette = useCallback(() => {
     const layerIndex = getLayerIndex(currentLayer);
+    const newHex = rgbToHex(currentRgb.r, currentRgb.g, currentRgb.b);
     
     // Check if original color is already in the palette (for updates)
-    const existingColorIndex = layerPalette.findIndex(color => color.color === originalColor);
+    const existingColorIndex = -1; // Temporarily disable this check since we removed color fields
     
     if (existingColorIndex !== -1) {
       // Update existing color - preserve original name
       const existingColor = layerPalette[existingColorIndex];
       onUpdatePaletteColor(layerIndex, existingColor.id, { 
-        color: currentColor,
+        color: newHex,
         name: existingColor.name // Preserve the original name
       });
     } else {
       // Add new color
-      onAddColorToPalette(layerIndex, currentColor, `RGB(${currentRgb.r},${currentRgb.g},${currentRgb.b})`);
+      onAddColorToPalette(layerIndex, newHex, `RGB(${currentRgb.r},${currentRgb.g},${currentRgb.b})`);
     }
+    
+    // Set the new color as current color
+    onColorChange(newHex);
     
     setHasModifiedColor(false); // Reset modification flag after saving
     setShowSaveButton(false); // Hide save button after saving
-    setOriginalColor(currentColor); // Update original color to current color
-  }, [getLayerIndex, currentColor, currentRgb, originalColor, layerPalette, onAddColorToPalette, onUpdatePaletteColor]);
+    setOriginalColor(newHex); // Update original color to new color
+  }, [getLayerIndex, currentRgb, layerPalette, onAddColorToPalette, onUpdatePaletteColor, onColorChange, rgbToHex]);
 
   // Handle replacing a specific palette color with current color
   const handleReplacePaletteColor = useCallback((paletteColorId: string) => {
     const layerIndex = getLayerIndex(currentLayer);
     // Find the original palette color to preserve its name
-    const originalPaletteColor = layerPalette.find(color => color.id === paletteColorId);
+    const originalPaletteColor = layerPalette.find(color => color.id === paletteColorId) || null;
     const originalName = originalPaletteColor?.name || `RGB(${currentRgb.r},${currentRgb.g},${currentRgb.b})`;
     
     onUpdatePaletteColor(layerIndex, paletteColorId, { 
-      color: currentColor,
+      color: currentColor || '',
       name: originalName // Preserve the original name
     });
   }, [getLayerIndex, currentColor, currentRgb, layerPalette, onUpdatePaletteColor]);
@@ -187,27 +251,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   return (
     <div className="color-picker">
-      {/* Tab Navigation */}
-      <div className="color-picker-tabs">
-        <button
-          className={`color-picker-tab ${activeTab === 'picker' ? 'active' : ''}`}
-          onClick={() => onTabChange('picker')}
-        >
-          <span className="material-icons">palette</span>
-          Painter
-        </button>
-        <button
-          className={`color-picker-tab ${activeTab === 'table' ? 'active' : ''}`}
-          onClick={() => onTabChange('table')}
-        >
-          <span className="material-icons">table_chart</span>
-          Kanäle
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'picker' && (
-        <>
+      {/* Color Picker Content */}
+      <>
           <div className="color-picker-section">
             <h3 className="color-picker-title">Pinselgröße</h3>
         
@@ -238,7 +283,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
         <h3 className="color-picker-title">Layer</h3>
         <div className="layer-tabs">
           {layers.map((layer) => (
-            <div key={layer.id} className="layer-tab-item">
+            <div key={`layer-${layer.id}`} className="layer-tab-item">
               <button
                 className={`layer-tab ${currentLayer === (layer.id === 0 ? 'red' : layer.id === 1 ? 'green' : 'blue') ? 'active' : ''}`}
                 onClick={() => onLayerChange(layer.id === 0 ? 'red' : layer.id === 1 ? 'green' : 'blue')}
@@ -270,7 +315,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
         <div className="current-palette">
           <div className="palette-list">
             {layerPalette.map((paletteColor) => (
-              <div key={paletteColor.id} className="palette-item">
+              <div key={`palette-${paletteColor.id}`} className="palette-item">
                 <button
                   className={`palette-color-button ${selectedPaletteColor === paletteColor.color ? 'active' : ''}`}
                   style={{ backgroundColor: paletteColor.color }}
@@ -279,9 +324,49 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                 />
                 <input
                   type="text"
-                  value={paletteColor.name}
+                  value={editingNames[paletteColor.id] !== undefined ? editingNames[paletteColor.id] : paletteColor.name}
                   onChange={(e) => {
-                    onUpdatePaletteColor(getLayerIndex(currentLayer), paletteColor.id, { name: e.target.value });
+                    // Only update local editing state, don't save yet
+                    setEditingNames(prev => ({
+                      ...prev,
+                      [paletteColor.id]: e.target.value
+                    }));
+                  }}
+                  onBlur={(e) => {
+                    // Save the final name when focus is lost
+                    const finalName = editingNames[paletteColor.id] !== undefined ? editingNames[paletteColor.id] : e.target.value;
+                    onUpdatePaletteColor(getLayerIndex(currentLayer), paletteColor.id, { name: finalName });
+                    // Clear the editing state
+                    setEditingNames(prev => {
+                      const newState = { ...prev };
+                      delete newState[paletteColor.id];
+                      return newState;
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    // Prevent form submission
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const finalName = editingNames[paletteColor.id] !== undefined ? editingNames[paletteColor.id] : e.currentTarget.value;
+                      onUpdatePaletteColor(getLayerIndex(currentLayer), paletteColor.id, { name: finalName });
+                      // Clear the editing state
+                      setEditingNames(prev => {
+                        const newState = { ...prev };
+                        delete newState[paletteColor.id];
+                        return newState;
+                      });
+                      e.currentTarget.blur(); // Remove focus
+                    }
+                    // Cancel editing when Escape is pressed
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingNames(prev => {
+                        const newState = { ...prev };
+                        delete newState[paletteColor.id];
+                        return newState;
+                      });
+                      e.currentTarget.blur(); // Remove focus
+                    }
                   }}
                   className="palette-color-name"
                   placeholder="Farbname"
@@ -365,6 +450,24 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
           <div className="rgb-controls">
             <div className="rgb-slider">
+              <label htmlFor="all-slider">Alle:</label>
+              <input
+                id="all-slider"
+                type="range"
+                min="0"
+                max="255"
+                step="10"
+                value={Math.round((currentRgb.r + currentRgb.g + currentRgb.b) / 3)}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  handleRgbChange('all', value);
+                }}
+                className="rgb-slider-input all-slider"
+              />
+              <span className="rgb-value">{Math.round((currentRgb.r + currentRgb.g + currentRgb.b) / 3)}</span>
+            </div>
+
+            <div className="rgb-slider">
               <label htmlFor="red-slider">R:</label>
               <input
                 id="red-slider"
@@ -416,7 +519,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           <div className="predefined-colors-grid">
             {predefinedColors.map((color, index) => (
               <button
-                key={index}
+                key={`predefined-${index}-${color}`}
                 className={`predefined-color-button ${currentColor === color ? 'active' : ''}`}
                 style={{ backgroundColor: color }}
                 onClick={() => handlePredefinedColorClick(color)}
@@ -426,19 +529,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           </div>
         </div>
       </div>
-        </>
-      )}
-
-      {/* Color Table Tab - Content is now rendered in the main canvas area */}
-      {activeTab === 'table' && (
-        <div className="color-table-placeholder">
-          <div className="placeholder-content">
-            <span className="material-icons">table_chart</span>
-            <h3>Kanäle</h3>
-            <p>Die Kanäle werden im Hauptbereich angezeigt</p>
-          </div>
-        </div>
-      )}
+      </>
     </div>
   );
 };

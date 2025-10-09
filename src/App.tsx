@@ -1,10 +1,11 @@
 "use strict";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import PixelCanvas from './components/PixelCanvas';
+import PixelCanvasSimple from './components/PixelCanvasSimple';
 import Toolbar from './components/Toolbar';
 import ColorPicker from './components/ColorPicker';
 import FileOperations from './components/FileOperations';
+import Footer from './components/Footer';
 import ColorTable, { ColorTableEntry } from './components/ColorTable';
 import ColorTableNew from './components/ColorTableNew';
 import ColorTableCards from './components/ColorTableCards';
@@ -81,10 +82,6 @@ const App: React.FC = () => {
     const savedPatternAnimationType = localStorage.getItem('pixel-painter-pattern-animation-type');
     return savedPatternAnimationType || 'waves';
   });
-  const [channelValueMode, setChannelValueMode] = useState<boolean>(() => {
-    const savedChannelValueMode = localStorage.getItem('pixel-painter-channel-value-mode');
-    return savedChannelValueMode ? JSON.parse(savedChannelValueMode) : true;
-  });
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [currentLayer, setCurrentLayer] = useState<LayerType>('red');
@@ -113,7 +110,7 @@ const App: React.FC = () => {
   ]);
   const [colorTable, setColorTable] = useState<ColorTableEntry[]>([]);
 
-  // Central function to update color table and localStorage
+  // Color table is now managed server-side only - AUTO-SYNC DISABLED
   const updateColorTableAndJson = useCallback((newColorTable: ColorTableEntry[] | ((prev: ColorTableEntry[]) => ColorTableEntry[])) => {
     // Handle both direct array and functional update
     setColorTable(prevTable => {
@@ -121,23 +118,10 @@ const App: React.FC = () => {
         ? newColorTable(prevTable) 
         : newColorTable;
       
-      // Save to localStorage
-      try {
-        localStorage.setItem('pixel-painter-color-table', JSON.stringify(actualColorTable));
-        console.log('🔧 App: Successfully updated color table in localStorage');
-      } catch (error) {
-        console.error('🔧 App: Error saving color table to localStorage:', error);
-      }
-      
-      // Also update the ColorTableService to sync with JSON file
+      // Update the ColorTableService to sync with server
       import('./services/colorTableService').then(({ colorTableService }) => {
-        // Update the service with the new color table data
+        // Update the service with the new color table data (automatically syncs to server)
         colorTableService.updateColorTableFromArray(actualColorTable);
-        
-        // Trigger JSON file update
-        colorTableService.updateColorTablesJson().catch(error => {
-          console.error('🔧 App: Error updating color tables JSON:', error);
-        });
       }).catch(error => {
         console.error('🔧 App: Error importing ColorTableService:', error);
       });
@@ -146,41 +130,83 @@ const App: React.FC = () => {
     });
   }, []);
 
-  // Toggle channel value mode
-  const handleChannelValueModeToggle = useCallback(() => {
-    setChannelValueMode(prevMode => {
-      const newMode = !prevMode;
-      console.log('🔄 ChannelValue Toggle:', { oldMode: prevMode, newMode });
-      localStorage.setItem('pixel-painter-channel-value-mode', JSON.stringify(newMode));
-      return newMode;
-    });
-  }, []);
 
-  // Load initial color table data from localStorage (server dependency removed)
+  // Load initial color table data from server
   useEffect(() => {
-    const loadInitialColorTable = () => {
+    const loadInitialColorTable = async () => {
       try {
-        const savedColorTable = localStorage.getItem('pixel-painter-color-table');
-        if (savedColorTable) {
-          const colorTableData = JSON.parse(savedColorTable);
-          setColorTable(colorTableData);
-          console.log('🔧 App: Loaded initial color table from localStorage', colorTableData);
+        // Load from server API
+        const response = await fetch('http://localhost:3001/api/color-tables', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
+        if (response.ok) {
+          const colorTables = await response.json();
+          // Load all color tables, not just current layer
+          const allColorTables = [
+            ...(colorTables.red || []),
+            ...(colorTables.green || []),
+            ...(colorTables.blue || [])
+          ];
+          setColorTable(allColorTables);
+          console.log('🔧 App: Loaded all color tables from server', allColorTables);
+          
+          // Update palettes based on loaded color tables
+          setLayers(prevLayers => {
+            const updatedLayers = [...prevLayers];
+            
+            // Update red layer palette
+            if (colorTables.red && colorTables.red.length > 0) {
+              updatedLayers[0] = {
+                ...updatedLayers[0],
+                palette: colorTables.red.map(entry => ({
+                  color: entry.color,
+                  name: entry.name
+                }))
+              };
+            }
+            
+            // Update green layer palette
+            if (colorTables.green && colorTables.green.length > 0) {
+              updatedLayers[1] = {
+                ...updatedLayers[1],
+                palette: colorTables.green.map(entry => ({
+                  color: entry.color,
+                  name: entry.name
+                }))
+              };
+            }
+            
+            // Update blue layer palette
+            if (colorTables.blue && colorTables.blue.length > 0) {
+              updatedLayers[2] = {
+                ...updatedLayers[2],
+                palette: colorTables.blue.map(entry => ({
+                  color: entry.color,
+                  name: entry.name
+                }))
+              };
+            }
+            
+            console.log('🔧 App: Updated palettes from color tables', updatedLayers);
+            return updatedLayers;
+          });
         } else {
-          // Initialize with empty color table if none exists
+          console.error('Failed to load color tables from server');
           setColorTable([]);
-          console.log('🔧 App: No color table found, initialized with empty array');
         }
       } catch (error) {
-        console.error('🔧 App: Error loading initial color table from localStorage:', error);
+        console.error('🔧 App: Error loading initial color table from server:', error);
         setColorTable([]);
       }
     };
     
     loadInitialColorTable();
-  }, []);
-  const [activeColorTab, setActiveColorTab] = useState<'picker' | 'table'>(() => {
-    const savedTab = localStorage.getItem('pixel-painter-active-tab');
-    return (savedTab === 'picker' || savedTab === 'table') ? savedTab : 'picker';
+  }, []); // Only run once on mount
+  const [activeColorTab, setActiveColorTab] = useState<'picker'>(() => {
+    return 'picker';
   });
   const [pixelUpdateFunction, setPixelUpdateFunction] = useState<((layerType: LayerType, oldColor: string, newColor: string) => void) | null>(null);
 
@@ -189,10 +215,46 @@ const App: React.FC = () => {
     localStorage.setItem('pixel-painter-current-tool', tool);
   }, []);
 
-  const handleColorChange = useCallback((color: string) => {
+  const handleColorChange = useCallback((color: string | null) => {
     setCurrentColor(color);
-    localStorage.setItem('pixel-painter-current-color', color);
+    if (color) {
+      localStorage.setItem('pixel-painter-current-color', color);
+    } else {
+      localStorage.removeItem('pixel-painter-current-color');
+    }
   }, []);
+
+  // Auto-add color to palette when painting with RGB color
+  const handleAutoAddColorToPalette = useCallback((color: string) => {
+    const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
+    const layerPalette = layers[layerIndex]?.palette || [];
+    
+    // Check if color already exists in palette
+    const existingColor = layerPalette.find(p => p.color === color);
+    if (!existingColor) {
+      // Add new color to palette - we'll define handleAddColorToPalette later
+      const newColor: PaletteColor = {
+        id: Date.now().toString(),
+        name: `RGB-${color}`,
+        color: color
+      };
+      
+      const updatedLayers = [...layers];
+      updatedLayers[layerIndex] = {
+        ...updatedLayers[layerIndex],
+        palette: [...updatedLayers[layerIndex].palette, newColor]
+      };
+      setLayers(updatedLayers);
+      
+      // Set as current color
+      setCurrentColor(color);
+      console.log('🎨 Auto-added color to palette and selected:', color);
+    } else {
+      // Use existing color
+      setCurrentColor(color);
+      console.log('🎨 Selected existing color from palette:', color);
+    }
+  }, [currentLayer, layers]);
 
   const handleBrushSizeChange = useCallback((size: number) => {
     setBrushSize(size);
@@ -340,10 +402,9 @@ const App: React.FC = () => {
     };
   }, [layers]);
 
-  // Handle color tab change
-  const handleColorTabChange = useCallback((tab: 'picker' | 'table') => {
+  // Handle color tab change (only picker tab now)
+  const handleColorTabChange = useCallback((tab: 'picker') => {
     setActiveColorTab(tab);
-    localStorage.setItem('pixel-painter-active-tab', tab);
   }, []);
 
   // Handle pixel update function from canvas
@@ -418,26 +479,28 @@ const App: React.FC = () => {
       pixelUpdateFunction(layerType, originalColor.color, updates.color);
     }
 
-    // Update colorTables.json when palette colors change
-    const updatedLayers = layers.map(layer => 
-      layer.id === layerId 
-        ? { 
-            ...layer, 
-            palette: layer.palette.map(color => 
-              color.id === colorId ? { ...color, ...updates } : color
-            )
-          }
-        : layer
-    );
+    // Auto-sync to colorTables.json DISABLED to prevent refreshes
+    // const updatedLayers = layers.map(layer => 
+    //   layer.id === layerId 
+    //     ? { 
+    //         ...layer, 
+    //         palette: layer.palette.map(color => 
+    //           color.id === colorId ? { ...color, ...updates } : color
+    //         )
+    //       }
+    //     : layer
+    // );
     
-    // Import colorTableService dynamically to avoid circular dependencies
-    import('./services/colorTableService').then(({ colorTableService }) => {
-      colorTableService.forceSyncAllPalettes(
-        updatedLayers[0].palette,
-        updatedLayers[1].palette,
-        updatedLayers[2].palette
-      );
-    });
+    // Import colorTableService dynamically to avoid circular dependencies - DISABLED
+    // import('./services/colorTableService').then(({ colorTableService }) => {
+    //   colorTableService.forceSyncAllPalettes(
+    //     updatedLayers[0].palette,
+    //     updatedLayers[1].palette,
+    //     updatedLayers[2].palette
+    //   );
+    // }).catch(error => {
+    //   console.error('🔧 App: Error syncing color tables:', error);
+    // });
   }, [layers, pixelUpdateFunction]);
 
   const handleRemovePaletteColor = useCallback((layerId: number, colorId: string) => {
@@ -466,186 +529,166 @@ const App: React.FC = () => {
     });
   }, [layers]);
 
-  // Initialize default palettes for each layer
-  const initializeDefaultPalettes = useCallback(() => {
-    const defaultPalettes = {
-      environment: [
-        { id: 'env-1', name: 'Gras', color: '#4a7c59' },
-        { id: 'env-2', name: 'Erde', color: '#8b4513' },
-        { id: 'env-3', name: 'Stein', color: '#696969' },
-        { id: 'env-4', name: 'Wasser', color: '#4169e1' }
-      ],
-      entities: [
-        { id: 'ent-1', name: 'Spieler', color: '#ff6b6b' },
-        { id: 'ent-2', name: 'Feind', color: '#ff4757' },
-        { id: 'ent-3', name: 'NPC', color: '#ffa502' },
-        { id: 'ent-4', name: 'Item', color: '#ff6348' }
-      ],
-      functions: [
-        { id: 'func-1', name: 'Tür', color: '#2f3542' },
-        { id: 'func-2', name: 'Schalter', color: '#ffa502' },
-        { id: 'func-3', name: 'Truhe', color: '#8b4513' },
-        { id: 'func-4', name: 'Portal', color: '#5f27cd' }
-      ]
-    };
-
-    console.log('🎨 Initializing default palettes:', defaultPalettes);
-
-    setLayers(prevLayers => 
-      prevLayers.map((layer, index) => {
-        const layerName = layer.name.toLowerCase();
-        const palette = defaultPalettes[layerName as keyof typeof defaultPalettes] || [];
-        console.log(`🎨 Setting palette for ${layerName}:`, palette);
-        return {
-          ...layer,
-          palette: palette
-        };
-      })
-    );
-
-    // Save to localStorage
-    localStorage.setItem('pixel-painter-palettes', JSON.stringify(defaultPalettes));
-    console.log('🎨 Saved default palettes to localStorage');
-  }, []);
-
-  // Load palettes and app state from localStorage on component mount
-  useEffect(() => {
-    const loadStateFromStorage = () => {
-      try {
-        // Load palettes
-        const savedPalettes = localStorage.getItem('pixel-painter-palettes');
-        if (savedPalettes) {
-          const palettes = JSON.parse(savedPalettes);
-          setLayers(prevLayers => 
-            prevLayers.map((layer, index) => {
-              const layerName = layer.name.toLowerCase();
-              return {
-                ...layer,
-                palette: palettes[layerName] || []
-              };
-            })
-          );
-          console.log('🎨 Loaded palettes from localStorage:', palettes);
-        } else {
-          // Initialize default palettes if none exist
-          console.log('🎨 No saved palettes found, initializing defaults');
-          initializeDefaultPalettes();
+  // Initialize default palettes from server storage only
+  const initializeDefaultPalettes = useCallback(async () => {
+    try {
+      // Load from server API instead of localStorage
+      const response = await fetch('http://localhost:3001/api/color-tables', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache'
         }
-
-        // Load color table
-        const savedColorTable = localStorage.getItem('pixel-painter-color-table');
-        if (savedColorTable) {
-          setColorTable(JSON.parse(savedColorTable));
-        }
-
-        // Load current tool
-        const savedTool = localStorage.getItem('pixel-painter-current-tool');
-        if (savedTool) {
-          setCurrentTool(savedTool as Tool);
-        }
-
-        // Load current color
-        const savedColor = localStorage.getItem('pixel-painter-current-color');
-        if (savedColor) {
-          setCurrentColor(savedColor);
-        } else {
-          setCurrentColor(null); // No color selected by default
-        }
-
-        // Load current layer
-        const savedLayer = localStorage.getItem('pixel-painter-current-layer');
-        if (savedLayer) {
-          setCurrentLayer(savedLayer as LayerType);
-        }
-
-        // Load brush size
-        const savedBrushSize = localStorage.getItem('pixel-painter-brush-size');
-        if (savedBrushSize) {
-          setBrushSize(parseInt(savedBrushSize));
-        }
-      } catch (error) {
-        console.error('Failed to load state from localStorage:', error);
-      }
-    };
-
-    loadStateFromStorage();
-  }, []);
-
-  // Auto-select first color from current layer's palette on app start
-  useEffect(() => {
-    const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
-    const layerPalette = layers[layerIndex]?.palette || [];
-    
-    // Always auto-select first color if palette has colors and no color is selected
-    if (!currentColor && layerPalette.length > 0) {
-      const firstColor = layerPalette[0].color;
-      setCurrentColor(firstColor);
-      console.log('🎨 Auto-selected first color from palette:', firstColor);
-    }
-  }, [currentLayer, layers, currentColor]);
-
-  // Force auto-select color when layers are loaded
-  useEffect(() => {
-    if (layers.length > 0) {
-      const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
-      const layerPalette = layers[layerIndex]?.palette || [];
-      
-      if (layerPalette.length > 0 && !currentColor) {
-        const firstColor = layerPalette[0].color;
-        setCurrentColor(firstColor);
-        console.log('🎨 Force auto-selected first color from loaded palette:', firstColor);
-      }
-    }
-  }, [layers, currentLayer, currentColor]);
-
-  // Save palettes to localStorage when they change
-  useEffect(() => {
-    const savePalettesToStorage = () => {
-      try {
-        const palettesToSave = {
-          environment: layers[0].palette,
-          entities: layers[1].palette,
-          functions: layers[2].palette
-        };
+      });
+      if (response.ok) {
+        const colorTables = await response.json();
         
-        localStorage.setItem('pixel-painter-palettes', JSON.stringify(palettesToSave));
-      } catch (error) {
-        console.error('Failed to save palettes to localStorage:', error);
-      }
-    };
+        const defaultPalettes = {
+          environment: colorTables.red.map((entry, index) => ({
+            id: `env-${index + 1}`,
+            name: entry.name,
+            color: entry.color
+          })),
+          entities: colorTables.green.map((entry, index) => ({
+            id: `ent-${index + 1}`,
+            name: entry.name,
+            color: entry.color
+          })),
+          functions: colorTables.blue.map((entry, index) => ({
+            id: `func-${index + 1}`,
+            name: entry.name,
+            color: entry.color
+          }))
+        };
 
-    // Debounce saves to avoid too many localStorage writes
-    const timeoutId = setTimeout(savePalettesToStorage, 500);
-    return () => clearTimeout(timeoutId);
-  }, [layers]);
+        console.log('🎨 Loaded palettes from server:', defaultPalettes);
 
-  // Save color table to localStorage when it changes
-  useEffect(() => {
-    const saveColorTableToStorage = () => {
-      try {
-        localStorage.setItem('pixel-painter-color-table', JSON.stringify(colorTable));
-      } catch (error) {
-        console.error('Failed to save color table to localStorage:', error);
-      }
-    };
-
-    // Debounce saves to avoid too many localStorage writes
-    const timeoutId = setTimeout(saveColorTableToStorage, 500);
-    return () => clearTimeout(timeoutId);
-  }, [colorTable]);
-
-  // Save current color to localStorage when it changes (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (currentColor) {
-        localStorage.setItem('pixel-painter-current-color', currentColor);
+        setLayers(prevLayers => 
+          prevLayers.map((layer, index) => {
+            // Map layer names to palette keys
+            const layerName = layer.name.toLowerCase();
+            let paletteKey = '';
+            
+            if (layerName === 'environment') {
+              paletteKey = 'environment';
+            } else if (layerName === 'entities') {
+              paletteKey = 'entities';
+            } else if (layerName === 'functions') {
+              paletteKey = 'functions';
+            }
+            
+            const palette = defaultPalettes[paletteKey] || [];
+            console.log(`🎨 Setting palette for ${layerName} (${paletteKey}):`, palette);
+            return {
+              ...layer,
+              palette: palette
+            };
+          })
+        );
       } else {
-        localStorage.removeItem('pixel-painter-current-color');
+        console.error('Failed to load color tables from server');
+        // Fallback to empty palettes
+        setLayers(prevLayers => 
+          prevLayers.map(layer => ({ ...layer, palette: [] }))
+        );
       }
-    }, 500); // Debounce by 500ms
+    } catch (error) {
+      console.error('Error loading palettes from server:', error);
+      // Fallback to empty palettes
+      setLayers(prevLayers => 
+        prevLayers.map(layer => ({ ...layer, palette: [] }))
+      );
+    }
+  }, []);
 
-    return () => clearTimeout(timeoutId);
-  }, [currentColor]);
+  // Load palettes from server on component mount - DISABLED to prevent refreshes
+  // useEffect(() => {
+  //   const loadStateFromStorage = () => {
+  //     try {
+  //       // Always load palettes from server, no localStorage
+  //       console.log('🎨 Loading palettes from server');
+  //       initializeDefaultPalettes();
+
+  //       // Color table is now managed by ColorTableService (server-side)
+
+  //       // Load current tool
+  //       const savedTool = localStorage.getItem('pixel-painter-current-tool');
+  //       if (savedTool) {
+  //         setCurrentTool(savedTool as Tool);
+  //       }
+
+  //       // Load current color
+  //       const savedColor = localStorage.getItem('pixel-painter-current-color');
+  //       if (savedColor) {
+  //         setCurrentColor(savedColor);
+  //       } else {
+  //         setCurrentColor(null); // No color selected by default
+  //       }
+
+  //       // Load current layer
+  //       const savedLayer = localStorage.getItem('pixel-painter-current-layer');
+  //       if (savedLayer) {
+  //         setCurrentLayer(savedLayer as LayerType);
+  //       }
+
+  //       // Load brush size
+  //       const savedBrushSize = localStorage.getItem('pixel-painter-brush-size');
+  //       if (savedBrushSize) {
+  //         setBrushSize(parseInt(savedBrushSize));
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to load state from localStorage:', error);
+  //     }
+  //   };
+
+  //   loadStateFromStorage();
+  // }, []);
+
+  // Single auto-select color effect - DISABLED to prevent refreshes
+  // useEffect(() => {
+  //   if (layers.length === 0) return; // Wait for layers to load
+  //   
+  //   const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
+  //   const layerPalette = layers[layerIndex]?.palette || [];
+  //   
+  //   if (layerPalette.length === 0) return; // No colors in palette
+  //   
+  //   // Check if we have a saved color in localStorage
+  //   const savedColor = localStorage.getItem('pixel-painter-current-color');
+  //   
+  //   if (savedColor) {
+  //     // Check if saved color exists in current layer's palette
+  //     const colorExists = layerPalette.find(p => p.color === savedColor);
+  //     if (colorExists) {
+  //       setCurrentColor(savedColor);
+  //       console.log('🎨 Restored saved color from localStorage:', savedColor);
+  //       return;
+  //     }
+  //   }
+  //   
+  //   // If no current color or current color doesn't exist in palette, select first available
+  //   if (!currentColor || !layerPalette.find(p => p.color === currentColor)) {
+  //     const firstColor = layerPalette[0].color;
+  //     setCurrentColor(firstColor);
+  //     console.log('🎨 Auto-selected first color from palette:', firstColor);
+  //   }
+  // }, [layers, currentLayer]); // Only depend on layers and currentLayer
+
+  // Palettes are now managed server-side, no localStorage saving needed
+
+  // Color table is now managed server-side, no localStorage saving needed
+
+  // Save current color to localStorage when it changes - DISABLED to prevent refreshes
+  // useEffect(() => {
+  //   const timeoutId = setTimeout(() => {
+  //     if (currentColor) {
+  //       localStorage.setItem('pixel-painter-current-color', currentColor);
+  //     } else {
+  //       localStorage.removeItem('pixel-painter-current-color');
+  //     }
+  //   }, 500); // Debounce by 500ms
+
+  //   return () => clearTimeout(timeoutId);
+  // }, [currentColor]);
 
   return (
     <div className="app">
@@ -691,65 +734,36 @@ const App: React.FC = () => {
           onPatternColorChange={handlePatternColorChange}
           onBackgroundColorChange={handleBackgroundColorChange}
           onPatternAnimationTypeChange={handlePatternAnimationTypeChange}
-          channelValueMode={channelValueMode}
-          onChannelValueModeToggle={handleChannelValueModeToggle}
         />
       </div>
       
       <div className="app-content">
-        <div className={`app-sidebar ${activeColorTab === 'table' ? 'color-table-active' : ''}`}>
-          {activeColorTab === 'picker' ? (
-            <ColorPicker
-              currentColor={currentColor}
-              onColorChange={handleColorChange}
-              brushSize={brushSize}
-              onBrushSizeChange={handleBrushSizeChange}
-              currentLayer={currentLayer}
-              onLayerChange={handleLayerChange}
-              layers={layers}
-              onLayerVisibilityToggle={handleLayerVisibilityToggle}
-              onLayerOpacityChange={handleLayerOpacityChange}
-              layerPalette={getCurrentLayerPalette()}
-              onAddColorToPalette={handleAddColorToPalette}
-              onUpdatePaletteColor={handleUpdatePaletteColor}
-              onRemovePaletteColor={handleRemovePaletteColor}
-              colorTable={colorTable}
-              onColorTableChange={updateColorTableAndJson}
-              layerPalettes={getAllLayerPalettes()}
-              activeTab={activeColorTab}
-              onTabChange={handleColorTabChange}
-            />
-          ) : (
-            <div className="color-table-container">
-              <div className="color-picker-tabs">
-                <button
-                  className={`color-picker-tab ${activeColorTab === 'picker' ? 'active' : ''}`}
-                  onClick={() => handleColorTabChange('picker')}
-                >
-                  <span className="material-icons">palette</span>
-                  Painter
-                </button>
-                <button
-                  className={`color-picker-tab ${activeColorTab === 'table' ? 'active' : ''}`}
-                  onClick={() => handleColorTabChange('table')}
-                >
-                  <span className="material-icons">table_chart</span>
-                  Kanäle
-                </button>
-              </div>
-              
-              <ColorTableCards
-                colorTable={colorTable}
-                onColorTableChange={updateColorTableAndJson}
-                currentLayer={currentLayer}
-                layers={layers}
-              />
-            </div>
-          )}
+        <div className="app-sidebar">
+          <ColorPicker
+            currentColor={currentColor}
+            onColorChange={handleColorChange}
+            brushSize={brushSize}
+            onBrushSizeChange={handleBrushSizeChange}
+            currentLayer={currentLayer}
+            onLayerChange={handleLayerChange}
+            layers={layers}
+            onLayerVisibilityToggle={handleLayerVisibilityToggle}
+            onLayerOpacityChange={handleLayerOpacityChange}
+            layerPalette={getCurrentLayerPalette()}
+            onAddColorToPalette={handleAddColorToPalette}
+            onUpdatePaletteColor={handleUpdatePaletteColor}
+            onRemovePaletteColor={handleRemovePaletteColor}
+            colorTable={colorTable}
+            onColorTableChange={updateColorTableAndJson}
+            layerPalettes={getAllLayerPalettes()}
+            activeTab={activeColorTab}
+            onTabChange={handleColorTabChange}
+            onAutoAddColorToPalette={handleAutoAddColorToPalette}
+          />
         </div>
         
         <div className="app-main">
-          <PixelCanvas
+          <PixelCanvasSimple
             width={canvasSize}
             height={canvasSize}
             currentTool={currentTool}
@@ -773,10 +787,13 @@ const App: React.FC = () => {
             patternColor={patternColor}
             backgroundColor={backgroundColor}
             patternAnimationType={patternAnimationType}
-            channelValueMode={channelValueMode}
+            onAutoAddColorToPalette={handleAutoAddColorToPalette}
+            currentRgbColor={currentColor}
           />
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };

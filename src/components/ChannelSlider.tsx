@@ -81,7 +81,7 @@ const ChannelSlider: React.FC<ChannelSliderProps> = React.memo(({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className={`channel-slider ${className}`}
-      title={title || `${channel.toUpperCase()}-Kanal: ${displayValue}`}
+      title={title || `${channel.toUpperCase()}-Layer: ${displayValue}`}
     />
   );
 });

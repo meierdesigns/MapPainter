@@ -11,9 +11,9 @@ export interface ColorTableEntry {
 }
 
 export interface ColorTables {
-  red: ColorTableEntry[];
-  green: ColorTableEntry[];
-  blue: ColorTableEntry[];
+  red: ColorTableEntry[]; // Environment
+  green: ColorTableEntry[]; // Entities
+  blue: ColorTableEntry[]; // Functions
 }
 
 class ColorTableService {
@@ -41,20 +41,15 @@ class ColorTableService {
         // Add missing channelValue fields to existing entries
         this.migrateChannelValues();
       } else {
-        // Initialize with default data
-        this.colorTables = {
-          red: [],
-          green: [],
-          blue: []
-        };
+        // Initialize with default data from colorTables.json
+        this.colorTables = colorTablesData;
+        console.log('🔧 ColorTableService: Initialized with colorTables.json data');
       }
     } catch (error) {
       console.error('Failed to load color tables from localStorage:', error);
-      this.colorTables = {
-        red: [],
-        green: [],
-        blue: []
-      };
+      // Fallback to colorTables.json data
+      this.colorTables = colorTablesData;
+      console.log('🔧 ColorTableService: Fallback to colorTables.json data');
     }
   }
 
@@ -267,24 +262,14 @@ class ColorTableService {
     this.saveToStorage();
   }
 
-  // Export color tables to JSON file
+  // Export color tables to JSON file (server-side only)
   exportToJsonFile(): void {
     try {
-      const dataStr = JSON.stringify(this.colorTables, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'colorTables.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      console.log('🔧 ColorTableService: Exported color tables to JSON file');
+      // Save to localStorage as backup - server handles the actual file
+      localStorage.setItem('pixel-painter-color-tables-json', JSON.stringify(this.colorTables, null, 2));
+      console.log('🔧 ColorTableService: Saved color tables to localStorage as backup');
     } catch (error) {
-      console.error('Failed to export color tables to JSON file:', error);
+      console.error('🔧 ColorTableService: Error saving to localStorage:', error);
     }
   }
 
@@ -355,24 +340,14 @@ class ColorTableService {
     }
   }
 
-  // Write color tables to JSON file manually
+  // Write color tables to JSON file manually (server-side only)
   private writeToJsonFile(): void {
     try {
-      const dataStr = JSON.stringify(this.colorTables, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'colorTables.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      console.log('🔧 ColorTableService: Manually exported color tables to JSON file');
+      // Only save to localStorage as backup - server handles the actual file
+      localStorage.setItem('pixel-painter-color-tables-json', JSON.stringify(this.colorTables, null, 2));
+      console.log('🔧 ColorTableService: Saved color tables to localStorage as backup');
     } catch (error) {
-      console.error('Failed to write color tables to JSON file:', error);
+      console.error('🔧 ColorTableService: Error saving to localStorage:', error);
     }
   }
 
@@ -427,6 +402,11 @@ class ColorTableService {
     
     // Save to localStorage as backup
     this.saveToStorage();
+    
+    // Update server and JSON file
+    this.updateColorTablesJson().catch(error => {
+      console.error('🔧 ColorTableService: Error updating color tables JSON after array update:', error);
+    });
   }
 }
 

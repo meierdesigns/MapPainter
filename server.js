@@ -169,27 +169,65 @@ async function savePngFiles(layers, canvasSize) {
   try {
     await ensureImagesFolder();
     
-    // Save each layer as PNG (always use the same filenames)
-    const redBuffer = Buffer.from(layers.red, 'base64');
-    const greenBuffer = Buffer.from(layers.green, 'base64');
-    const blueBuffer = Buffer.from(layers.blue, 'base64');
+    // Check if layers have new structure (color + channel) or old structure (single base64)
+    const hasNewStructure = layers.red && typeof layers.red === 'object' && layers.red.color && layers.red.channel;
     
-    const redPath = path.join(IMAGES_FOLDER, 'layer-red-current.png');
-    const greenPath = path.join(IMAGES_FOLDER, 'layer-green-current.png');
-    const bluePath = path.join(IMAGES_FOLDER, 'layer-blue-current.png');
-    
-    await Promise.all([
-      fs.writeFile(redPath, redBuffer),
-      fs.writeFile(greenPath, greenBuffer),
-      fs.writeFile(bluePath, blueBuffer)
-    ]);
-    
-    console.log('🖼️ Server: PNG files updated in images folder');
-    return {
-      red: 'layer-red-current.png',
-      green: 'layer-green-current.png',
-      blue: 'layer-blue-current.png'
-    };
+    if (hasNewStructure) {
+      // New structure: save both color and channel versions
+      const redColorBuffer = Buffer.from(layers.red.color, 'base64');
+      const redChannelBuffer = Buffer.from(layers.red.channel, 'base64');
+      const greenColorBuffer = Buffer.from(layers.green.color, 'base64');
+      const greenChannelBuffer = Buffer.from(layers.green.channel, 'base64');
+      const blueColorBuffer = Buffer.from(layers.blue.color, 'base64');
+      const blueChannelBuffer = Buffer.from(layers.blue.channel, 'base64');
+      
+      const redColorPath = path.join(IMAGES_FOLDER, 'layer-red-color.png');
+      const redChannelPath = path.join(IMAGES_FOLDER, 'layer-red-channel.png');
+      const greenColorPath = path.join(IMAGES_FOLDER, 'layer-green-color.png');
+      const greenChannelPath = path.join(IMAGES_FOLDER, 'layer-green-channel.png');
+      const blueColorPath = path.join(IMAGES_FOLDER, 'layer-blue-color.png');
+      const blueChannelPath = path.join(IMAGES_FOLDER, 'layer-blue-channel.png');
+      
+      await Promise.all([
+        // Save color versions (Painter Value)
+        fs.writeFile(redColorPath, redColorBuffer),
+        fs.writeFile(greenColorPath, greenColorBuffer),
+        fs.writeFile(blueColorPath, blueColorBuffer),
+        // Save channel versions (Channel Value)
+        fs.writeFile(redChannelPath, redChannelBuffer),
+        fs.writeFile(greenChannelPath, greenChannelBuffer),
+        fs.writeFile(blueChannelPath, blueChannelBuffer)
+      ]);
+      
+      console.log('🖼️ Server: PNG files updated in images folder (color + channel versions)');
+      return {
+        red: { color: 'layer-red-color.png', channel: 'layer-red-channel.png' },
+        green: { color: 'layer-green-color.png', channel: 'layer-green-channel.png' },
+        blue: { color: 'layer-blue-color.png', channel: 'layer-blue-channel.png' }
+      };
+    } else {
+      // Old structure: save single versions (backward compatibility)
+      const redBuffer = Buffer.from(layers.red, 'base64');
+      const greenBuffer = Buffer.from(layers.green, 'base64');
+      const blueBuffer = Buffer.from(layers.blue, 'base64');
+      
+      const redPath = path.join(IMAGES_FOLDER, 'layer-environment.png');
+      const greenPath = path.join(IMAGES_FOLDER, 'layer-entities.png');
+      const bluePath = path.join(IMAGES_FOLDER, 'layer-functions.png');
+      
+      await Promise.all([
+        fs.writeFile(redPath, redBuffer),
+        fs.writeFile(greenPath, greenBuffer),
+        fs.writeFile(bluePath, blueBuffer)
+      ]);
+      
+      console.log('🖼️ Server: PNG files updated in images folder (legacy format)');
+      return {
+        red: 'layer-environment.png',
+        green: 'layer-entities.png',
+        blue: 'layer-functions.png'
+      };
+    }
   } catch (error) {
     console.error('Error saving PNG files:', error);
     return null;
@@ -199,9 +237,9 @@ async function savePngFiles(layers, canvasSize) {
 // Load PNG files from images folder
 async function loadPngFiles() {
   try {
-    const redPath = path.join(IMAGES_FOLDER, 'layer-red-current.png');
-    const greenPath = path.join(IMAGES_FOLDER, 'layer-green-current.png');
-    const bluePath = path.join(IMAGES_FOLDER, 'layer-blue-current.png');
+    const redPath = path.join(IMAGES_FOLDER, 'layer-environment.png');
+    const greenPath = path.join(IMAGES_FOLDER, 'layer-entities.png');
+    const bluePath = path.join(IMAGES_FOLDER, 'layer-functions.png');
     
     // Check if all three files exist
     try {
@@ -226,9 +264,9 @@ async function loadPngFiles() {
         blue: blueBuffer.toString('base64')
       },
       files: {
-        red: 'layer-red-current.png',
-        green: 'layer-green-current.png',
-        blue: 'layer-blue-current.png'
+        red: 'layer-environment.png',
+        green: 'layer-entities.png',
+        blue: 'layer-functions.png'
       }
     };
   } catch (error) {
@@ -240,9 +278,9 @@ async function loadPngFiles() {
 // Clear PNG files from images folder
 async function clearPngFiles() {
   try {
-    const redPath = path.join(IMAGES_FOLDER, 'layer-red-current.png');
-    const greenPath = path.join(IMAGES_FOLDER, 'layer-green-current.png');
-    const bluePath = path.join(IMAGES_FOLDER, 'layer-blue-current.png');
+    const redPath = path.join(IMAGES_FOLDER, 'layer-environment.png');
+    const greenPath = path.join(IMAGES_FOLDER, 'layer-entities.png');
+    const bluePath = path.join(IMAGES_FOLDER, 'layer-functions.png');
     
     // Try to delete each file (ignore errors if files don't exist)
     await Promise.allSettled([
@@ -483,6 +521,88 @@ app.delete('/api/image-cache', async (req, res) => {
   } catch (error) {
     console.error('Error clearing image cache:', error);
     res.status(500).json({ error: 'Failed to clear image cache' });
+  }
+});
+
+// Get image ages
+app.get('/api/image-ages', async (req, res) => {
+  try {
+    // Check for new structure first (color + channel files)
+    const redColorPath = path.join(IMAGES_FOLDER, 'layer-red-color.png');
+    const redChannelPath = path.join(IMAGES_FOLDER, 'layer-red-channel.png');
+    const greenColorPath = path.join(IMAGES_FOLDER, 'layer-green-color.png');
+    const greenChannelPath = path.join(IMAGES_FOLDER, 'layer-green-channel.png');
+    const blueColorPath = path.join(IMAGES_FOLDER, 'layer-blue-color.png');
+    const blueChannelPath = path.join(IMAGES_FOLDER, 'layer-blue-channel.png');
+    
+    // Fallback to old structure
+    const redLegacyPath = path.join(IMAGES_FOLDER, 'layer-environment.png');
+    const greenLegacyPath = path.join(IMAGES_FOLDER, 'layer-entities.png');
+    const blueLegacyPath = path.join(IMAGES_FOLDER, 'layer-functions.png');
+    
+    const calculateAge = (lastModified) => {
+      const now = new Date();
+      const diffMs = now.getTime() - lastModified.getTime();
+      const diffSeconds = Math.floor(diffMs / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      const diffHours = Math.floor(diffMinutes / 60);
+
+      if (diffSeconds < 60) {
+        return `${diffSeconds}s`;
+      } else if (diffMinutes < 60) {
+        return `${diffMinutes}m`;
+      } else if (diffHours < 24) {
+        return `${diffHours}h`;
+      } else {
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d`;
+      }
+    };
+
+    const getAge = async (filePath) => {
+      try {
+        const stats = await fs.stat(filePath);
+        return calculateAge(stats.mtime);
+      } catch (error) {
+        return 'Nicht vorhanden';
+      }
+    };
+
+    // Check if new structure exists
+    try {
+      await fs.access(redColorPath);
+      // New structure exists
+      const [redColorAge, redChannelAge, greenColorAge, greenChannelAge, blueColorAge, blueChannelAge] = await Promise.all([
+        getAge(redColorPath),
+        getAge(redChannelPath),
+        getAge(greenColorPath),
+        getAge(greenChannelPath),
+        getAge(blueColorPath),
+        getAge(blueChannelPath)
+      ]);
+
+      res.json({
+        red: { color: redColorAge, channel: redChannelAge },
+        green: { color: greenColorAge, channel: greenChannelAge },
+        blue: { color: blueColorAge, channel: blueChannelAge }
+      });
+    } catch (error) {
+      // Fallback to legacy structure
+      const [redAge, greenAge, blueAge] = await Promise.all([
+        getAge(redLegacyPath),
+        getAge(greenLegacyPath),
+        getAge(blueLegacyPath)
+      ]);
+
+      res.json({
+        red: redAge,
+        green: greenAge,
+        blue: blueAge
+      });
+    }
+  } catch (error) {
+    console.error('Error getting image ages:', error);
+    res.status(500).json({ error: 'Failed to get image ages' });
   }
 });
 

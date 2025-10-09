@@ -631,6 +631,31 @@
   transform: scale(1.1);
 }
 
+/* Special styling for the "All" slider */
+.all-slider {
+  background: linear-gradient(to right, #000, #fff);
+}
+
+.all-slider::-webkit-slider-thumb {
+  background: #666;
+  border: 2px solid #999;
+}
+
+.all-slider::-webkit-slider-thumb:hover {
+  background: #999;
+  border: 2px solid #ccc;
+}
+
+.all-slider::-moz-range-thumb {
+  background: #666;
+  border: 2px solid #999;
+}
+
+.all-slider::-moz-range-thumb:hover {
+  background: #999;
+  border: 2px solid #ccc;
+}
+
 .rgb-slider-input::-moz-range-thumb {
   width: 16px;
   height: 16px;

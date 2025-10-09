@@ -1,6 +1,7 @@
 "use strict";
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { hexToRgb } from '../utils/colorUtils';
 import './ChannelPreviewModal.css';
 
 interface ChannelPreviewModalProps {
@@ -39,15 +40,6 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
   const combinedPreviewRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Helper function to convert hex color to RGB
-  const hexToRgb = useCallback((hex: string): { r: number; g: number; b: number } => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-  }, []);
 
   // Helper function to get channel value for a color
   const getChannelValue = useCallback((color: string, channel: 'red' | 'green' | 'blue'): number => {
@@ -68,7 +60,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
       case 'blue': return rgb.b;
     }
     return 0;
-  }, [colorTable, hexToRgb]);
+  }, [colorTable]);
 
   // Generate preview canvases
   const generatePreviews = useCallback(async () => {
@@ -273,7 +265,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
       // Small delay to ensure DOM is ready
       setTimeout(generatePreviews, 100);
     }
-  }, [isOpen, generatePreviews]);
+  }, [isOpen]); // Remove generatePreviews dependency to prevent constant re-creation
 
   // Handle escape key
   useEffect(() => {
@@ -300,7 +292,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
         <div className="channel-preview-modal-header">
           <h2 className="channel-preview-modal-title">
             <span className="material-icons">layers</span>
-            Kanal-Bild Vorschau
+            Layer-Bild Vorschau
           </h2>
           <button 
             className="channel-preview-modal-close"
@@ -325,7 +317,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
                   <div className="channel-preview-item">
                     <div className="channel-preview-label">
                       <span className="channel-indicator red"></span>
-                      Rot-Kanal (Environment)
+                      Rot-Layer (Environment)
                     </div>
                     <canvas
                       ref={redPreviewRef}
@@ -338,7 +330,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
                   <div className="channel-preview-item">
                     <div className="channel-preview-label">
                       <span className="channel-indicator green"></span>
-                      Grün-Kanal (Entities)
+                      Grün-Layer (Entities)
                     </div>
                     <canvas
                       ref={greenPreviewRef}
@@ -351,7 +343,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
                   <div className="channel-preview-item">
                     <div className="channel-preview-label">
                       <span className="channel-indicator blue"></span>
-                      Blau-Kanal (Functions)
+                      Blau-Layer (Functions)
                     </div>
                     <canvas
                       ref={bluePreviewRef}
@@ -373,11 +365,11 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
                     height={240}
                   />
                   <div className="channel-preview-info">
-                    <p>Alle drei Kanäle überlagert:</p>
+                    <p>Alle drei Layer überlagert:</p>
                     <ul>
-                      <li><span className="channel-indicator red"></span> Rot-Kanal → Rot-Werte</li>
-                      <li><span className="channel-indicator green"></span> Grün-Kanal → Grün-Werte</li>
-                      <li><span className="channel-indicator blue"></span> Blau-Kanal → Blau-Werte</li>
+                      <li><span className="channel-indicator red"></span> Rot-Layer → Rot-Werte</li>
+                      <li><span className="channel-indicator green"></span> Grün-Layer → Grün-Werte</li>
+                      <li><span className="channel-indicator blue"></span> Blau-Layer → Blau-Werte</li>
                     </ul>
                   </div>
                 </div>
@@ -400,7 +392,7 @@ const ChannelPreviewModal: React.FC<ChannelPreviewModalProps> = ({
             disabled={isGenerating}
           >
             <span className="material-icons">save</span>
-            Kanal-Bild speichern
+            Layer-Bild speichern
           </button>
         </div>
       </div>

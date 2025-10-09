@@ -1,0 +1,142 @@
+.footer {
+  background-color: #2c2c2c;
+  border-top: 1px solid #444;
+  padding: 8px 16px;
+  margin-top: auto;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.image-ages {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.age-label {
+  font-weight: 500;
+  color: #fff;
+}
+
+.age-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.age-item.red {
+  border-left: 3px solid #ff4444;
+}
+
+.age-item.green {
+  border-left: 3px solid #44ff44;
+}
+
+.age-item.blue {
+  border-left: 3px solid #4444ff;
+}
+
+/* Hover Preview Modal */
+.channel-preview-modal {
+  position: fixed;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  min-width: 200px;
+  transform: translate(-50%, -50%);
+}
+
+.preview-header {
+  text-align: center;
+  margin-bottom: 8px;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.preview-images {
+  display: flex;
+  justify-content: center;
+}
+
+.preview-image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-image {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: #1a1a1a;
+}
+
+.preview-label {
+  font-size: 10px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Hoverable items */
+.age-item.hoverable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.age-item.hoverable:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .image-ages {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .age-item {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .channel-preview-modal {
+    min-width: 160px;
+    padding: 8px;
+  }
+
+  .preview-images {
+    gap: 8px;
+  }
+
+  .preview-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .preview-header {
+    font-size: 12px;
+  }
+}

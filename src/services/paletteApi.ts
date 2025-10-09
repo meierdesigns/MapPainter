@@ -27,9 +27,9 @@ export interface ServerState {
 
 export interface ImageCache {
   layers: {
-    red: string | null;
-    green: string | null;
-    blue: string | null;
+    red: string | { color: string; channel: string } | null;
+    green: string | { color: string; channel: string } | null;
+    blue: string | { color: string; channel: string } | null;
   };
   timestamp: string | null;
   canvasSize: number;
@@ -150,7 +150,11 @@ class PaletteApiService {
     }
   }
 
-  async savePixelArtCache(layers: { red: string | null; green: string | null; blue: string | null }, canvasSize: number): Promise<boolean> {
+  async savePixelArtCache(layers: { 
+    red: string | { color: string; channel: string } | null; 
+    green: string | { color: string; channel: string } | null; 
+    blue: string | { color: string; channel: string } | null 
+  }, canvasSize: number): Promise<boolean> {
     try {
       await this.request('/image-cache', {
         method: 'POST',

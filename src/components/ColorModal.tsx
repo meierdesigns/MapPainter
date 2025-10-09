@@ -92,7 +92,7 @@ const ColorModal: React.FC<ColorModalProps> = ({
             <span className="material-icons" style={{ color: getChannelColor(channelType) }}>
               fiber_manual_record
             </span>
-            {getLayerName(channelType)}-Kanal bearbeiten
+            {getLayerName(channelType)}-Layer bearbeiten
           </h3>
           <button className="color-modal-close" onClick={handleCancel}>
             <span className="material-icons">close</span>
@@ -106,6 +106,7 @@ const ColorModal: React.FC<ColorModalProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={() => onNameChange(name)}
               className="color-modal-name-input"
               placeholder="Farbname eingeben"
             />

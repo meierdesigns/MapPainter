@@ -1,6 +1,7 @@
 "use strict";
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { hexToRgb } from '../utils/colorUtils';
 import ChannelSlider from './ChannelSlider';
 import { colorTableService, ColorTableEntry } from '../services/colorTableService';
 import './ColorTableCards.css';
@@ -22,31 +23,34 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
 }) => {
   const [previewValues, setPreviewValues] = useState<{[key: string]: {red: number, green: number, blue: number}}>({});
 
-  // Sync color table with palettes using the service - DISABLED to prevent clearing
-  // useEffect(() => {
-  //   console.log('🔧 ColorTableCards: syncColorTableWithPalettes useEffect');
-  //   const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
-  //   const layerPalette = layers[layerIndex]?.palette || [];
-  //   
-  //   console.log('🔧 ColorTableCards: Layer palette data', { 
-  //     layerIndex, 
-  //     layerPalette, 
-  //     paletteLength: layerPalette.length,
-  //     currentLayer 
-  //   });
-  //   
-  //   // Use the service to sync palette to color table
-  //   const newTable = colorTableService.syncPaletteToColorTable(currentLayer, layerPalette);
-  //   
-  //   console.log('🔧 ColorTableCards: Service returned table', { 
-  //     newTable, 
-  //     newTableLength: newTable.length,
-  //     oldTableLength: colorTable.length 
-  //   });
-  //   
-  //   // Update the parent component
-  //   onColorTableChange(newTable);
-  // }, [layers, currentLayer, onColorTableChange]);
+  // Sync color table with palettes using the service
+  useEffect(() => {
+    console.log('🔧 ColorTableCards: syncColorTableWithPalettes useEffect');
+    const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
+    const layerPalette = layers[layerIndex]?.palette || [];
+    
+    console.log('🔧 ColorTableCards: Layer palette data', { 
+      layerIndex, 
+      layerPalette, 
+      paletteLength: layerPalette.length,
+      currentLayer 
+    });
+    
+    // Only sync if we have palette data and the color table is empty or different
+    if (layerPalette.length > 0) {
+      // Use the service to sync palette to color table
+      const newTable = colorTableService.syncPaletteToColorTable(currentLayer, layerPalette);
+      
+      console.log('🔧 ColorTableCards: Service returned table', { 
+        newTable, 
+        newTableLength: newTable.length,
+        oldTableLength: colorTable.length 
+      });
+      
+      // Update the parent component
+      onColorTableChange(newTable);
+    }
+  }, [layers, currentLayer, onColorTableChange]);
 
   // Hex to RGB and RGB to Hex conversions are now handled by the service
 
@@ -74,19 +78,26 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
 
   // Handle channel value change (final save) - stable reference to prevent re-renders
   const handleChannelValueChange = useCallback((entryId: string, channel: 'red' | 'green' | 'blue', value: number) => {
-    // Use functional update to avoid dependency on colorTable
-    onColorTableChange(prevTable => {
-      const updatedTable = prevTable.map(entry => {
-        if (entry.id === entryId) {
-          const updatedEntry = { ...entry };
-          // ONLY update channelValue, NOT the individual color channels
+    // Update the color table directly
+    const updatedTable = colorTable.map((entry: ColorTableEntry) => {
+      if (entry.id === entryId) {
+        const updatedEntry = { 
+          ...entry,
+          [`${channel}Channel`]: value
+        };
+        
+        // Update the channelValue if this is the channel for this layer
+        const layerFromId = entryId.split('-')[1] as 'red' | 'green' | 'blue';
+        if (layerFromId === channel) {
           updatedEntry.channelValue = value;
-          return updatedEntry;
         }
-        return entry;
-      });
-      return updatedTable;
+        
+        return updatedEntry;
+      }
+      return entry;
     });
+    
+    onColorTableChange(updatedTable);
     
     // Clear preview values for this entry
     setPreviewValues(prev => {
@@ -122,19 +133,21 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
       return previewValue;
     }
     
-    // Use channelValue if this is the channel for this layer
-    const layerFromId = entry.id.split('-')[1] as 'red' | 'green' | 'blue';
-    if (layerFromId === channel && entry.channelValue !== undefined) {
-      return entry.channelValue;
+    // Derive RGB values from ID or use default values
+    // Since no RGB values are stored, we need to derive them from the ID or use defaults
+    const hexColor = entry.id.split('-')[2]; // Extract hex from ID like "table-red-#ffffff-5"
+    if (hexColor && hexColor.startsWith('#')) {
+      const rgb = hexToRgb(hexColor);
+      if (rgb) {
+        switch (channel) {
+          case 'red': return rgb.r;
+          case 'green': return rgb.g;
+          case 'blue': return rgb.b;
+          default: return 0;
+        }
+      }
     }
-    
-    // Fall back to the channel value
-    switch (channel) {
-      case 'red': return entry.redChannel;
-      case 'green': return entry.greenChannel;
-      case 'blue': return entry.blueChannel;
-      default: return 0;
-    }
+    return 0;
   }, [previewValues]);
 
   // Get display color for channel sliders - shows only the specific channel color - memoized
@@ -144,21 +157,26 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
     
     let channelValue;
     
-    // Use preview value if available
+    // Use preview value if available, otherwise use the specific channel value
     if (previewValue !== undefined) {
       channelValue = previewValue;
     } else {
-      // Use channelValue if this is the channel for this layer
-      if (layerFromId === channel && entry.channelValue !== undefined) {
-        channelValue = entry.channelValue;
-      } else {
-        // Fallback to individual channel values
-        switch (channel) {
-          case 'red': channelValue = entry.redChannel; break;
-          case 'green': channelValue = entry.greenChannel; break;
-          case 'blue': channelValue = entry.blueChannel; break;
-          default: channelValue = 0;
+      // Derive RGB values from ID
+      const hexColor = entry.id.split('-')[2]; // Extract hex from ID like "table-red-#ffffff-5"
+      if (hexColor && hexColor.startsWith('#')) {
+        const rgb = hexToRgb(hexColor);
+        if (rgb) {
+          switch (channel) {
+            case 'red': channelValue = rgb.r; break;
+            case 'green': channelValue = rgb.g; break;
+            case 'blue': channelValue = rgb.b; break;
+            default: channelValue = 0;
+          }
+        } else {
+          channelValue = 0;
         }
+      } else {
+        channelValue = 0;
       }
     }
     
@@ -204,21 +222,37 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
     return map;
   }, [colorTable]);
 
-  // Get translated color based on channelValue for each channel - shows final RGB overlay
+  // Get translated color based on channel values for each channel - shows final RGB overlay
   const getTranslatedColor = useCallback((entry: ColorTableEntry) => {
     const key = `${entry.color}-${entry.name}`;
     const entryMap = colorLookupMap.get(key);
     
     if (!entryMap) {
-      // Fallback to individual channel values if no matching entries found
-      const toHex = (value: number) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
-      return `#${toHex(entry.redChannel)}${toHex(entry.greenChannel)}${toHex(entry.blueChannel)}`;
+      // Fallback to hex color from ID if no matching entries found
+      const hexColor = entry.id.split('-')[2]; // Extract hex from ID like "table-red-#ffffff-5"
+      return hexColor && hexColor.startsWith('#') ? hexColor : '#000000';
     }
     
-    // Get channelValue for each channel, fallback to individual channel values
-    const redValue = entryMap.red?.channelValue ?? entryMap.red?.redChannel ?? 0;
-    const greenValue = entryMap.green?.channelValue ?? entryMap.green?.greenChannel ?? 0;
-    const blueValue = entryMap.blue?.channelValue ?? entryMap.blue?.blueChannel ?? 0;
+    // Get channel values for each channel from hex colors in IDs
+    const getChannelValue = (entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
+      const hexColor = entry.id.split('-')[2]; // Extract hex from ID like "table-red-#ffffff-5"
+      if (hexColor && hexColor.startsWith('#')) {
+        const rgb = hexToRgb(hexColor);
+        if (rgb) {
+          switch (channel) {
+            case 'red': return rgb.r;
+            case 'green': return rgb.g;
+            case 'blue': return rgb.b;
+            default: return 0;
+          }
+        }
+      }
+      return 0;
+    };
+    
+    const redValue = entryMap.red ? getChannelValue(entryMap.red, 'red') : 0;
+    const greenValue = entryMap.green ? getChannelValue(entryMap.green, 'green') : 0;
+    const blueValue = entryMap.blue ? getChannelValue(entryMap.blue, 'blue') : 0;
     
     // Convert to hex - this shows the final RGB overlay combination
     const toHex = (value: number) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
@@ -232,7 +266,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
     return (
       <div className="color-table-cards-container">
         <div className="color-table-header">
-          <h3>Kanäle - Kanal-Zuweisungen</h3>
+          <h3>Layer - Layer-Zuweisungen</h3>
           <div className="current-layer">
             <span className="layer-icon">layers</span>
             <span>Aktueller Layer: {currentLayer === 'red' ? 'Rot' : currentLayer === 'green' ? 'Grün' : 'Blau'}</span>
@@ -265,7 +299,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
             >
               R
             </div>
-            <div className="channel-title">Rot-Kanal</div>
+            <div className="channel-title">Rot-Layer</div>
           </div>
           
           <div className="channel-card-content">
@@ -282,7 +316,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
                   <div 
                     className="channel-color-preview"
                     style={{ backgroundColor: getDisplayColor(entry, 'red') }}
-                    title={`Rot-Kanal: ${getDisplayValue(entry, 'red')}`}
+                    title={`Rot-Layer: ${getDisplayValue(entry, 'red')}`}
                   />
                   <ChannelSlider
                     entryId={entry.id}
@@ -290,7 +324,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
                     value={getDisplayValue(entry, 'red')}
                     onValueChange={handleChannelValueChange}
                     onPreviewChange={handlePreviewChange}
-                    title={`Rot-Kanal: ${getDisplayValue(entry, 'red')}`}
+                    title={`Rot-Layer: ${getDisplayValue(entry, 'red')}`}
                   />
                   <span className="channel-value-text">
                     {getDisplayValue(entry, 'red')}
@@ -310,7 +344,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
             >
               G
             </div>
-            <div className="channel-title">Grün-Kanal</div>
+            <div className="channel-title">Grün-Layer</div>
           </div>
           
           <div className="channel-card-content">
@@ -327,7 +361,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
                   <div 
                     className="channel-color-preview"
                     style={{ backgroundColor: getDisplayColor(entry, 'green') }}
-                    title={`Grün-Kanal: ${getDisplayValue(entry, 'green')}`}
+                    title={`Grün-Layer: ${getDisplayValue(entry, 'green')}`}
                   />
                   <ChannelSlider
                     entryId={entry.id}
@@ -335,7 +369,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
                     value={getDisplayValue(entry, 'green')}
                     onValueChange={handleChannelValueChange}
                     onPreviewChange={handlePreviewChange}
-                    title={`Grün-Kanal: ${getDisplayValue(entry, 'green')}`}
+                    title={`Grün-Layer: ${getDisplayValue(entry, 'green')}`}
                   />
                   <span className="channel-value-text">
                     {getDisplayValue(entry, 'green')}
@@ -355,7 +389,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
             >
               B
             </div>
-            <div className="channel-title">Blau-Kanal</div>
+            <div className="channel-title">Blau-Layer</div>
           </div>
           
           <div className="channel-card-content">
@@ -372,7 +406,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
                   <div 
                     className="channel-color-preview"
                     style={{ backgroundColor: getDisplayColor(entry, 'blue') }}
-                    title={`Blau-Kanal: ${getDisplayValue(entry, 'blue')}`}
+                    title={`Blau-Layer: ${getDisplayValue(entry, 'blue')}`}
                   />
                   <ChannelSlider
                     entryId={entry.id}
@@ -380,7 +414,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
                     value={getDisplayValue(entry, 'blue')}
                     onValueChange={handleChannelValueChange}
                     onPreviewChange={handlePreviewChange}
-                    title={`Blau-Kanal: ${getDisplayValue(entry, 'blue')}`}
+                    title={`Blau-Layer: ${getDisplayValue(entry, 'blue')}`}
                   />
                   <span className="channel-value-text">
                     {getDisplayValue(entry, 'blue')}

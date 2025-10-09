@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import ChannelSlider from './ChannelSlider';
+import { hexToRgb, rgbToHex } from '../utils/colorUtils';
 import './ColorTableNew.css';
 
 interface ColorTableEntry {
@@ -34,51 +35,37 @@ const ColorTableNew: React.FC<ColorTableNewProps> = ({
     currentLayer 
   });
 
-  // Sync color table with palettes
-  useEffect(() => {
-    console.log('🔧 ColorTableNew: syncColorTableWithPalettes useEffect');
-    const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
-    const layerPalette = layers[layerIndex]?.palette || [];
-    
-    if (layerPalette.length > 0) {
-      const newTable: ColorTableEntry[] = layerPalette.map((paletteColor, index) => {
-        const existingEntry = colorTable.find(entry => entry.color === paletteColor.color);
-        
-        if (existingEntry) {
-          return existingEntry;
-        }
-        
-        // Create new entry
-        const rgb = hexToRgb(paletteColor.color);
-        return {
-          id: `table-${Date.now()}-${index}`,
-          name: paletteColor.name || `Farbe ${index + 1}`,
-          redChannel: rgb.r,
-          greenChannel: rgb.g,
-          blueChannel: rgb.b,
-          color: paletteColor.color
-        };
-      });
-      
-      console.log('🔧 ColorTableNew: Updating color table', { newTable });
-      onColorTableChange(newTable);
-    }
-  }, [layers, currentLayer, onColorTableChange]);
+  // Sync color table with palettes - DISABLED to prevent refreshes
+  // useEffect(() => {
+  //   console.log('🔧 ColorTableNew: syncColorTableWithPalettes useEffect');
+  //   const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
+  //   const layerPalette = layers[layerIndex]?.palette || [];
+  //   
+  //   if (layerPalette.length > 0) {
+  //     const newTable: ColorTableEntry[] = layerPalette.map((paletteColor, index) => {
+  //       const existingEntry = colorTable.find(entry => entry.color === paletteColor.color);
+  //       
+  //       if (existingEntry) {
+  //         return existingEntry;
+  //       }
+  //       
+  //       // Create new entry
+  //       const rgb = hexToRgb(paletteColor.color);
+  //       return {
+  //         id: `table-${Date.now()}-${index}`,
+  //         name: paletteColor.name || `Farbe ${index + 1}`,
+  //         redChannel: rgb.r,
+  //         greenChannel: rgb.g,
+  //         blueChannel: rgb.b,
+  //         color: paletteColor.color
+  //       };
+  //     });
+  //     
+  //     console.log('🔧 ColorTableNew: Updating color table', { newTable });
+  //     onColorTableChange(newTable);
+  //   }
+  // }, [layers, currentLayer, onColorTableChange]);
 
-  // Hex to RGB conversion
-  const hexToRgb = useCallback((hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-  }, []);
-
-  // RGB to Hex conversion
-  const rgbToHex = useCallback((r: number, g: number, b: number) => {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-  }, []);
 
   // Get grayscale color from channel value
   const getGrayscaleColorFromChannel = useCallback((value: number) => {
@@ -114,7 +101,7 @@ const ColorTableNew: React.FC<ColorTableNewProps> = ({
     
     console.log('🔧 ColorTableNew: Calling onColorTableChange', { updatedTable });
     onColorTableChange(updatedTable);
-  }, [colorTable, onColorTableChange, rgbToHex]);
+  }, [colorTable, onColorTableChange]);
 
   // Handle preview change (during dragging)
   const handlePreviewChange = useCallback((entryId: string, channel: 'red' | 'green' | 'blue', value: number) => {

@@ -1,116 +1,15 @@
 {
   "red": [
     {
-      "id": "table-red-#000000-0",
-      "name": "void",
-      "redChannel": 146,
-      "greenChannel": 0,
-      "blueChannel": 0,
-      "color": "#000000",
-      "channelValue": 50
-    },
-    {
-      "id": "table-red-#646464-1",
-      "name": "Walls",
-      "redChannel": 182,
-      "greenChannel": 100,
-      "blueChannel": 100,
-      "color": "#646464",
-      "channelValue": 175
-    },
-    {
-      "id": "table-red-#6e2800-2",
-      "name": "Floor",
-      "redChannel": 228,
-      "greenChannel": 40,
-      "blueChannel": 0,
-      "color": "#6e2800",
-      "channelValue": 40
-    }
-  ],
-  "green": [
-    {
-      "id": "table-green-#784646-0",
-      "name": "Table",
-      "redChannel": 120,
-      "greenChannel": 70,
-      "blueChannel": 70,
-      "color": "#784646",
-      "channelValue": 255
-    },
-    {
-      "id": "table-green-#32140a-1",
-      "name": "Wardrobe",
+      "id": "table-red-#d2b4b4-0",
+      "name": "Wall",
       "redChannel": 50,
-      "greenChannel": 20,
-      "blueChannel": 10,
-      "color": "#32140a",
-      "channelValue": 60
-    },
-    {
-      "id": "table-green-#faf00a-2",
-      "name": "Lamp",
-      "redChannel": 250,
-      "greenChannel": 240,
-      "blueChannel": 10,
-      "color": "#faf00a",
-      "channelValue": 70
-    },
-    {
-      "id": "table-green-#be4646-3",
-      "name": "Door",
-      "redChannel": 190,
-      "greenChannel": 70,
-      "blueChannel": 70,
-      "color": "#be4646",
-      "channelValue": 240
+      "greenChannel": 180,
+      "blueChannel": 180,
+      "color": "#d2b4b4",
+      "channelValue": 50
     }
   ],
-  "blue": [
-    {
-      "id": "table-blue-#fa00fa-0",
-      "name": "PlayerStart",
-      "redChannel": 250,
-      "greenChannel": 0,
-      "blueChannel": 250,
-      "color": "#fa00fa",
-      "channelValue": 250
-    },
-    {
-      "id": "table-blue-#00ff00-1",
-      "name": "ExitA",
-      "redChannel": 0,
-      "greenChannel": 255,
-      "blueChannel": 0,
-      "color": "#00ff00",
-      "channelValue": 105
-    },
-    {
-      "id": "table-blue-#ff0000-2",
-      "name": "ExitB",
-      "redChannel": 255,
-      "greenChannel": 0,
-      "blueChannel": 0,
-      "color": "#ff0000",
-      "channelValue": 0
-    },
-    {
-      "id": "table-blue-#0000ff-3",
-      "name": "ExitC",
-      "redChannel": 0,
-      "greenChannel": 0,
-      "blueChannel": 255,
-      "color": "#0000ff",
-      "channelValue": 255
-    },
-    {
-      "id": "table-blue-#ffff00-4",
-      "name": "ExitD",
-      "redChannel": 255,
-      "greenChannel": 255,
-      "blueChannel": 0,
-      "color": "#ffff00",
-      "channelValue": 0
-    }
-  ]
+  "green": [],
+  "blue": []
 }

@@ -332,4 +332,29 @@
   background-color: #3a3a3a;
 }
 
+.color-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #fff;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  width: 100%;
+  cursor: text;
+  transition: all 0.2s ease;
+  display: block;
+}
+
+.color-name-input:hover {
+  background-color: #3a3a3a;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.color-name-input:focus {
+  background-color: #3a3a3a;
+  border-color: #4a9eff;
+  outline: none;
+}
+
 /* Note: Removed redundant styles that are not used in the current ColorTable implementation */

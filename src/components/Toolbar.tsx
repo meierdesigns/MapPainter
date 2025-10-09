@@ -34,9 +34,6 @@ interface ToolbarProps {
   onPatternColorChange: (color: string) => void;
   onBackgroundColorChange: (color: string) => void;
   onPatternAnimationTypeChange: (type: string) => void;
-  // Channel value mode settings
-  channelValueMode: boolean;
-  onChannelValueModeToggle: () => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = React.memo(({
@@ -67,9 +64,7 @@ const Toolbar: React.FC<ToolbarProps> = React.memo(({
   onPatternTypeChange,
   onPatternColorChange,
   onBackgroundColorChange,
-  onPatternAnimationTypeChange,
-  channelValueMode,
-  onChannelValueModeToggle
+  onPatternAnimationTypeChange
 }) => {
   // Debug log removed to prevent infinite re-renders
   const [showGridColorPicker, setShowGridColorPicker] = useState(false);
@@ -397,21 +392,6 @@ const Toolbar: React.FC<ToolbarProps> = React.memo(({
         </div>
 
         <div className="edit-controls">
-          <button
-            className={`edit-icon-button ${channelValueMode ? 'active' : ''}`}
-            onClick={() => {
-              // Debug log removed to prevent infinite re-renders
-              onChannelValueModeToggle();
-            }}
-            title={channelValueMode ? 'ChannelValue-Modus deaktivieren' : 'ChannelValue-Modus aktivieren'}
-            style={{
-              backgroundColor: channelValueMode ? '#007acc' : '#333',
-              borderColor: channelValueMode ? '#0099ff' : '#555',
-              color: channelValueMode ? '#ffffff' : '#cccccc'
-            }}
-          >
-            <span className="material-icons">tune</span>
-          </button>
           <button
             className="edit-icon-button"
             onClick={onUndo}

@@ -9,11 +9,6 @@ import './ColorTable.css';
 export interface ColorTableEntry {
   id: string;
   name: string;
-  color: string;
-  redChannel: number;
-  greenChannel: number;
-  blueChannel: number;
-  channelValue: number; // Specific channel value for the layer this entry belongs to
 }
 
 interface ColorTableProps {
@@ -132,20 +127,17 @@ const ColorTable: React.FC<ColorTableProps> = ({
     const updatedTable = colorTable.map(entry => {
       if (entry.id === entryId) {
         const updatedEntry = { ...entry };
-        const oldValue = updatedEntry[`${channel}Channel`];
-        updatedEntry[`${channel}Channel`] = Math.max(0, Math.min(255, value));
+        // Parse RGB string and update the specific channel
+        const rgbValues = updatedEntry.rgb.split(',').map(v => parseInt(v.trim()));
+        const oldValue = rgbValues[channel === 'red' ? 0 : channel === 'green' ? 1 : 2];
+        rgbValues[channel === 'red' ? 0 : channel === 'green' ? 1 : 2] = Math.max(0, Math.min(255, value));
+        updatedEntry.rgb = rgbValues.join(',');
         
-        // Update the channelValue if this is the channel for this layer
-        const layerFromId = entryId.split('-')[1] as 'red' | 'green' | 'blue';
-        if (layerFromId === channel) {
-          updatedEntry.channelValue = Math.max(0, Math.min(255, value));
-        }
         
         console.log('🎛️ DEBUG: Channel updated', { 
           channel, 
           oldValue, 
-          newValue: updatedEntry[`${channel}Channel`],
-          channelValue: updatedEntry.channelValue,
+          newValue: rgbValues[channel === 'red' ? 0 : channel === 'green' ? 1 : 2],
           entryId 
         });
         
@@ -322,10 +314,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
   //   syncColorTableWithPalettes();
   // }, [layerPalettes, syncColorTableWithPalettes]);
 
-  // Force re-render when colorTable changes
-  React.useEffect(() => {
-    // Table will re-render automatically when colorTable changes
-  }, [colorTable]);
+  // Removed redundant useEffect - React automatically re-renders when props change
 
   // Handle opening modal for channel color
   const handleChannelColorClick = useCallback((entryId: string, channelType: LayerType) => {
@@ -458,7 +447,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
   return (
     <div className="color-table">
       <div className="color-table-header">
-        <h3 className="color-table-title">Farbtabelle - Kanal-Zuweisungen</h3>
+        <h3 className="color-table-title">Farbtabelle - Layer-Zuweisungen</h3>
         <div className="current-layer-info">
           <span className="layer-indicator">
             <span className="material-icons">layers</span>
@@ -469,7 +458,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
 
       <div className="color-table-content">
         <div className="channel-tables-container">
-          {/* Rot-Kanal Tabelle */}
+          {/* Rot-Layer Tabelle */}
           <div className="channel-table">
             <div className="channel-table-header">
               <div className="channel-color-stripe red"></div>
@@ -478,7 +467,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
               <div className="table-header">
                 <div className="header-cell">Name</div>
                 <div className="header-cell">
-                  <span className="channel-letter" title="Kanal-Farbe">R</span>
+                  <span className="channel-letter" title="Layer-Farbe">R</span>
                 </div>
                 <div className="header-cell">
                   <span className="material-icons" title="Palette-Farbe">palette</span>
@@ -488,26 +477,40 @@ const ColorTable: React.FC<ColorTableProps> = ({
                 {getColorsForChannel('red').map((entry, index) => (
                   <div key={`red-${entry.id}-${entry.redChannel}`} className="table-row">
                     <div className="table-cell name-cell">
-                      <span 
-                        className="color-name-text"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newName = prompt('Farbname eingeben:', entry.name);
-                          if (newName !== null && newName !== entry.name) {
-                            updateColorName(entry.id, newName);
+                      <input
+                        type="text"
+                        value={entry.name || 'Unbenannt'}
+                        onChange={(e) => {
+                          // Update local state immediately for UI responsiveness
+                          updateColorName(entry.id, e.target.value);
+                        }}
+                        onBlur={(e) => {
+                          // Save the final name when focus is lost
+                          updateColorName(entry.id, e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          // Prevent form submission
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            updateColorName(entry.id, e.target.value);
+                            e.currentTarget.blur();
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            e.currentTarget.blur();
                           }
                         }}
+                        className="color-name-input"
                         title="Klicken zum Bearbeiten"
-                      >
-                        {entry.name || 'Unbenannt'}
-                      </span>
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
                     <div className="table-cell channel-color-cell">
                       <div className="channel-controls">
                         <div 
                           className="channel-color-preview inline clickable"
                           style={{ backgroundColor: getChannelColorFromValue(entry.redChannel, 'red') }}
-                          title={`Rot-Kanal: ${entry.redChannel} - Klicken zum Bearbeiten`}
+                          title={`Rot-Layer: ${entry.redChannel} - Klicken zum Bearbeiten`}
                           onClick={() => handleChannelColorClick(entry.id, 'red')}
                         />
                          <input
@@ -518,7 +521,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
                            value={entry.redChannel}
                            onChange={(e) => updateChannelValue(entry.id, 'red', parseInt(e.target.value) || 0)}
                            className="channel-slider"
-                           title={`Rot-Kanal: ${entry.redChannel}`}
+                           title={`Rot-Layer: ${entry.redChannel}`}
                          />
                          {editingChannel.entryId === entry.id && editingChannel.channel === 'red' ? (
                            <input
@@ -566,7 +569,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
             </div>
           </div>
 
-          {/* Grün-Kanal Tabelle */}
+          {/* Grün-Layer Tabelle */}
           <div className="channel-table">
             <div className="channel-table-header">
               <div className="channel-color-stripe green"></div>
@@ -575,7 +578,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
               <div className="table-header">
                 <div className="header-cell">Name</div>
                 <div className="header-cell">
-                  <span className="channel-letter" title="Kanal-Farbe">G</span>
+                  <span className="channel-letter" title="Layer-Farbe">G</span>
                 </div>
                 <div className="header-cell">
                   <span className="material-icons" title="Palette-Farbe">palette</span>
@@ -585,26 +588,40 @@ const ColorTable: React.FC<ColorTableProps> = ({
                 {getColorsForChannel('green').map((entry, index) => (
                   <div key={`green-${entry.id}-${entry.greenChannel}`} className="table-row">
                     <div className="table-cell name-cell">
-                      <span 
-                        className="color-name-text"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newName = prompt('Farbname eingeben:', entry.name);
-                          if (newName !== null && newName !== entry.name) {
-                            updateColorName(entry.id, newName);
+                      <input
+                        type="text"
+                        value={entry.name || 'Unbenannt'}
+                        onChange={(e) => {
+                          // Update local state immediately for UI responsiveness
+                          updateColorName(entry.id, e.target.value);
+                        }}
+                        onBlur={(e) => {
+                          // Save the final name when focus is lost
+                          updateColorName(entry.id, e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          // Prevent form submission
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            updateColorName(entry.id, e.target.value);
+                            e.currentTarget.blur();
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            e.currentTarget.blur();
                           }
                         }}
+                        className="color-name-input"
                         title="Klicken zum Bearbeiten"
-                      >
-                        {entry.name || 'Unbenannt'}
-                      </span>
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
                     <div className="table-cell channel-color-cell">
                       <div className="channel-controls">
                         <div 
                           className="channel-color-preview inline clickable"
                           style={{ backgroundColor: getChannelColorFromValue(entry.greenChannel, 'green') }}
-                          title={`Grün-Kanal: ${entry.greenChannel} - Klicken zum Bearbeiten`}
+                          title={`Grün-Layer: ${entry.greenChannel} - Klicken zum Bearbeiten`}
                           onClick={() => handleChannelColorClick(entry.id, 'green')}
                         />
                          <input
@@ -615,7 +632,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
                            value={entry.greenChannel}
                            onChange={(e) => updateChannelValue(entry.id, 'green', parseInt(e.target.value) || 0)}
                            className="channel-slider"
-                           title={`Grün-Kanal: ${entry.greenChannel}`}
+                           title={`Grün-Layer: ${entry.greenChannel}`}
                          />
                          {editingChannel.entryId === entry.id && editingChannel.channel === 'green' ? (
                            <input
@@ -663,7 +680,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
             </div>
           </div>
 
-          {/* Blau-Kanal Tabelle */}
+          {/* Blau-Layer Tabelle */}
           <div className="channel-table">
             <div className="channel-table-header">
               <div className="channel-color-stripe blue"></div>
@@ -672,7 +689,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
               <div className="table-header">
                 <div className="header-cell">Name</div>
                 <div className="header-cell">
-                  <span className="channel-letter" title="Kanal-Farbe">B</span>
+                  <span className="channel-letter" title="Layer-Farbe">B</span>
                 </div>
                 <div className="header-cell">
                   <span className="material-icons" title="Palette-Farbe">palette</span>
@@ -682,26 +699,40 @@ const ColorTable: React.FC<ColorTableProps> = ({
                 {getColorsForChannel('blue').map((entry, index) => (
                   <div key={`blue-${entry.id}-${entry.blueChannel}`} className="table-row">
                     <div className="table-cell name-cell">
-                      <span 
-                        className="color-name-text"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newName = prompt('Farbname eingeben:', entry.name);
-                          if (newName !== null && newName !== entry.name) {
-                            updateColorName(entry.id, newName);
+                      <input
+                        type="text"
+                        value={entry.name || 'Unbenannt'}
+                        onChange={(e) => {
+                          // Update local state immediately for UI responsiveness
+                          updateColorName(entry.id, e.target.value);
+                        }}
+                        onBlur={(e) => {
+                          // Save the final name when focus is lost
+                          updateColorName(entry.id, e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          // Prevent form submission
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            updateColorName(entry.id, e.target.value);
+                            e.currentTarget.blur();
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            e.currentTarget.blur();
                           }
                         }}
+                        className="color-name-input"
                         title="Klicken zum Bearbeiten"
-                      >
-                        {entry.name || 'Unbenannt'}
-                      </span>
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
                     <div className="table-cell channel-color-cell">
                       <div className="channel-controls">
                         <div 
                           className="channel-color-preview inline clickable"
                           style={{ backgroundColor: getChannelColorFromValue(entry.blueChannel, 'blue') }}
-                          title={`Blau-Kanal: ${entry.blueChannel} - Klicken zum Bearbeiten`}
+                          title={`Blau-Layer: ${entry.blueChannel} - Klicken zum Bearbeiten`}
                           onClick={() => handleChannelColorClick(entry.id, 'blue')}
                         />
                          <input
@@ -712,7 +743,7 @@ const ColorTable: React.FC<ColorTableProps> = ({
                            value={entry.blueChannel}
                            onChange={(e) => updateChannelValue(entry.id, 'blue', parseInt(e.target.value) || 0)}
                            className="channel-slider"
-                           title={`Blau-Kanal: ${entry.blueChannel}`}
+                           title={`Blau-Layer: ${entry.blueChannel}`}
                          />
                          {editingChannel.entryId === entry.id && editingChannel.channel === 'blue' ? (
                            <input
