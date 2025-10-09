@@ -56,7 +56,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
     return `rgb(${clampedValue}, ${clampedValue}, ${clampedValue})`;
   }, []);
 
-  // Convert colorTable prop to the expected format
+  // Convert colorTable prop to the expected format - memoized for performance
   const colorTableData = useMemo(() => {
     const data = {
       red: colorTable.filter(entry => entry.id.includes('red')),
@@ -64,37 +64,29 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
       blue: colorTable.filter(entry => entry.id.includes('blue'))
     };
     
-    console.log('🔧 ColorTableCards: Converted colorTable prop to data', { 
-      red: data.red, 
-      green: data.green, 
-      blue: data.blue 
-    });
-    
     return data;
   }, [colorTable]);
 
-  // Get colors for a specific channel from colorTableData
-  const getColorsForChannel = (channel: 'red' | 'green' | 'blue') => {
+  // Get colors for a specific channel from colorTableData - memoized
+  const getColorsForChannel = useCallback((channel: 'red' | 'green' | 'blue') => {
     return colorTableData[channel] || [];
-  };
+  }, [colorTableData]);
 
-  // Handle channel value change (final save)
+  // Handle channel value change (final save) - stable reference to prevent re-renders
   const handleChannelValueChange = useCallback((entryId: string, channel: 'red' | 'green' | 'blue', value: number) => {
-    console.log('🔧 ColorTableCards: handleChannelValueChange', { entryId, channel, value });
-    
-    // Update the colorTable prop through the parent component
-    const updatedTable = colorTable.map(entry => {
-      if (entry.id === entryId) {
-        const updatedEntry = { ...entry };
-        // ONLY update channelValue, NOT the individual color channels
-        updatedEntry.channelValue = value;
-        return updatedEntry;
-      }
-      return entry;
+    // Use functional update to avoid dependency on colorTable
+    onColorTableChange(prevTable => {
+      const updatedTable = prevTable.map(entry => {
+        if (entry.id === entryId) {
+          const updatedEntry = { ...entry };
+          // ONLY update channelValue, NOT the individual color channels
+          updatedEntry.channelValue = value;
+          return updatedEntry;
+        }
+        return entry;
+      });
+      return updatedTable;
     });
-    
-    // Update through parent component (this will trigger JSON update)
-    onColorTableChange(updatedTable);
     
     // Clear preview values for this entry
     setPreviewValues(prev => {
@@ -110,12 +102,10 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
       }
       return updated;
     });
-  }, [colorTable, onColorTableChange]);
+  }, [onColorTableChange]);
 
-  // Handle preview change (during dragging)
+  // Handle preview change (during dragging) - stable reference
   const handlePreviewChange = useCallback((entryId: string, channel: 'red' | 'green' | 'blue', value: number) => {
-    console.log('🔧 ColorTableCards: handlePreviewChange', { entryId, channel, value });
-    
     setPreviewValues(prev => ({
       ...prev,
       [entryId]: {
@@ -125,8 +115,8 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
     }));
   }, []);
 
-  // Get display value (preview or actual)
-  const getDisplayValue = (entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
+  // Get display value (preview or actual) - memoized
+  const getDisplayValue = useCallback((entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
     const previewValue = previewValues[entry.id]?.[channel];
     if (previewValue !== undefined) {
       return previewValue;
@@ -145,41 +135,34 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
       case 'blue': return entry.blueChannel;
       default: return 0;
     }
-  };
+  }, [previewValues]);
 
-  // Get display color (preview or actual) - now shows channel color instead of grayscale
-  const getDisplayColor = (entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
+  // Get display color for channel sliders - shows only the specific channel color - memoized
+  const getDisplayColor = useCallback((entry: ColorTableEntry, channel: 'red' | 'green' | 'blue') => {
     const previewValue = previewValues[entry.id]?.[channel];
-    if (previewValue !== undefined) {
-      const channelValue = previewValue;
-      // Return channel color instead of grayscale
-      switch (channel) {
-        case 'red':
-          return `rgb(${channelValue}, 0, 0)`;
-        case 'green':
-          return `rgb(0, ${channelValue}, 0)`;
-        case 'blue':
-          return `rgb(0, 0, ${channelValue})`;
-        default:
-          return getGrayscaleColorFromChannel(channelValue);
-      }
-    }
-    
-    // Use channelValue if this is the channel for this layer
     const layerFromId = entry.id.split('-')[1] as 'red' | 'green' | 'blue';
+    
     let channelValue;
-    if (layerFromId === channel && entry.channelValue !== undefined) {
-      channelValue = entry.channelValue;
+    
+    // Use preview value if available
+    if (previewValue !== undefined) {
+      channelValue = previewValue;
     } else {
-      switch (channel) {
-        case 'red': channelValue = entry.redChannel; break;
-        case 'green': channelValue = entry.greenChannel; break;
-        case 'blue': channelValue = entry.blueChannel; break;
-        default: channelValue = 0;
+      // Use channelValue if this is the channel for this layer
+      if (layerFromId === channel && entry.channelValue !== undefined) {
+        channelValue = entry.channelValue;
+      } else {
+        // Fallback to individual channel values
+        switch (channel) {
+          case 'red': channelValue = entry.redChannel; break;
+          case 'green': channelValue = entry.greenChannel; break;
+          case 'blue': channelValue = entry.blueChannel; break;
+          default: channelValue = 0;
+        }
       }
     }
     
-    // Return channel color instead of grayscale
+    // Return channel color (only the specific channel, others are 0)
     switch (channel) {
       case 'red':
         return `rgb(${channelValue}, 0, 0)`;
@@ -190,7 +173,7 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
       default:
         return getGrayscaleColorFromChannel(channelValue);
     }
-  };
+  }, [previewValues, getGrayscaleColorFromChannel]);
 
   // Get channel color for the label
   const getChannelColor = useCallback((channel: 'red' | 'green' | 'blue') => {
@@ -201,6 +184,46 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
       default: return '#666';
     }
   }, []);
+
+  // Memoized lookup map for better performance - prevents O(n) searches on every render
+  const colorLookupMap = useMemo(() => {
+    const map = new Map<string, { red?: ColorTableEntry; green?: ColorTableEntry; blue?: ColorTableEntry }>();
+    
+    colorTable.forEach(entry => {
+      const key = `${entry.color}-${entry.name}`;
+      const layerFromId = entry.id.split('-')[1] as 'red' | 'green' | 'blue';
+      
+      if (!map.has(key)) {
+        map.set(key, {});
+      }
+      
+      const entryMap = map.get(key)!;
+      entryMap[layerFromId] = entry;
+    });
+    
+    return map;
+  }, [colorTable]);
+
+  // Get translated color based on channelValue for each channel - shows final RGB overlay
+  const getTranslatedColor = useCallback((entry: ColorTableEntry) => {
+    const key = `${entry.color}-${entry.name}`;
+    const entryMap = colorLookupMap.get(key);
+    
+    if (!entryMap) {
+      // Fallback to individual channel values if no matching entries found
+      const toHex = (value: number) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
+      return `#${toHex(entry.redChannel)}${toHex(entry.greenChannel)}${toHex(entry.blueChannel)}`;
+    }
+    
+    // Get channelValue for each channel, fallback to individual channel values
+    const redValue = entryMap.red?.channelValue ?? entryMap.red?.redChannel ?? 0;
+    const greenValue = entryMap.green?.channelValue ?? entryMap.green?.greenChannel ?? 0;
+    const blueValue = entryMap.blue?.channelValue ?? entryMap.blue?.blueChannel ?? 0;
+    
+    // Convert to hex - this shows the final RGB overlay combination
+    const toHex = (value: number) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
+    return `#${toHex(redValue)}${toHex(greenValue)}${toHex(blueValue)}`;
+  }, [colorLookupMap]);
 
   // Check if we have any data in colorTableData
   const hasData = colorTableData.red.length > 0 || colorTableData.green.length > 0 || colorTableData.blue.length > 0;
@@ -250,8 +273,8 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
               <div key={`${entry.id}-red`} className="color-entry">
                 <div className="color-info">
                   <div className="color-name">{entry.name}</div>
-                  <div className="color-preview" style={{ backgroundColor: entry.color }}>
-                    {entry.color}
+                  <div className="color-preview" style={{ backgroundColor: getTranslatedColor(entry) }}>
+                    {getTranslatedColor(entry)}
                   </div>
                 </div>
                 
@@ -295,8 +318,8 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
               <div key={`${entry.id}-green`} className="color-entry">
                 <div className="color-info">
                   <div className="color-name">{entry.name}</div>
-                  <div className="color-preview" style={{ backgroundColor: entry.color }}>
-                    {entry.color}
+                  <div className="color-preview" style={{ backgroundColor: getTranslatedColor(entry) }}>
+                    {getTranslatedColor(entry)}
                   </div>
                 </div>
                 
@@ -340,8 +363,8 @@ const ColorTableCards: React.FC<ColorTableCardsProps> = ({
               <div key={`${entry.id}-blue`} className="color-entry">
                 <div className="color-info">
                   <div className="color-name">{entry.name}</div>
-                  <div className="color-preview" style={{ backgroundColor: entry.color }}>
-                    {entry.color}
+                  <div className="color-preview" style={{ backgroundColor: getTranslatedColor(entry) }}>
+                    {getTranslatedColor(entry)}
                   </div>
                 </div>
                 

@@ -12,7 +12,7 @@ interface ChannelSliderProps {
   title?: string;
 }
 
-const ChannelSlider: React.FC<ChannelSliderProps> = ({
+const ChannelSlider: React.FC<ChannelSliderProps> = React.memo(({
   entryId,
   channel,
   value,
@@ -25,15 +25,13 @@ const ChannelSlider: React.FC<ChannelSliderProps> = ({
   const [previewValue, setPreviewValue] = useState<number | null>(null);
   const sliderRef = useRef<HTMLInputElement>(null);
 
-  console.log('🔧 ChannelSlider RENDER:', { entryId, channel, value, isDragging, previewValue });
+  // Debug logging removed to prevent performance issues
 
   const handleMouseDown = useCallback(() => {
-    console.log('🔧 ChannelSlider: handleMouseDown', { entryId, channel });
     setIsDragging(true);
-  }, [entryId, channel]);
+  }, []);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
-    console.log('🔧 ChannelSlider: handleMouseUp', { entryId, channel, value: e.currentTarget.value });
     const finalValue = parseInt(e.currentTarget.value) || 0;
     onValueChange(entryId, channel, finalValue);
     setIsDragging(false);
@@ -41,7 +39,6 @@ const ChannelSlider: React.FC<ChannelSliderProps> = ({
   }, [entryId, channel, onValueChange]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('🔧 ChannelSlider: handleChange', { entryId, channel, value: e.target.value });
     const newValue = parseInt(e.target.value) || 0;
     
     if (isDragging) {
@@ -55,12 +52,10 @@ const ChannelSlider: React.FC<ChannelSliderProps> = ({
   }, [entryId, channel, isDragging, onValueChange, onPreviewChange]);
 
   const handleTouchStart = useCallback(() => {
-    console.log('🔧 ChannelSlider: handleTouchStart', { entryId, channel });
     setIsDragging(true);
-  }, [entryId, channel]);
+  }, []);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLInputElement>) => {
-    console.log('🔧 ChannelSlider: handleTouchEnd', { entryId, channel, value: e.currentTarget.value });
     const finalValue = parseInt(e.currentTarget.value) || 0;
     onValueChange(entryId, channel, finalValue);
     setIsDragging(false);
@@ -70,14 +65,7 @@ const ChannelSlider: React.FC<ChannelSliderProps> = ({
   // Use preview value if available, otherwise use actual value
   const displayValue = previewValue !== null ? previewValue : value;
 
-  console.log('🔧 ChannelSlider: Final render values', { 
-    entryId, 
-    channel, 
-    value, 
-    previewValue, 
-    displayValue, 
-    isDragging 
-  });
+  // Final render values logging removed for performance
 
   return (
     <input
@@ -96,6 +84,8 @@ const ChannelSlider: React.FC<ChannelSliderProps> = ({
       title={title || `${channel.toUpperCase()}-Kanal: ${displayValue}`}
     />
   );
-};
+});
+
+ChannelSlider.displayName = 'ChannelSlider';
 
 export default ChannelSlider;

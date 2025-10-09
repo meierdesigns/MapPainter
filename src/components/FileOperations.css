@@ -92,6 +92,16 @@
   color: #ffffff;
 }
 
+.file-button.save-channels {
+  border-color: #9c27b0;
+  background-color: #2a1a2e;
+}
+
+.file-button.save-channels:hover {
+  background-color: #9c27b0;
+  color: #ffffff;
+}
+
 .file-button .material-icons {
   font-size: 18px;
 }

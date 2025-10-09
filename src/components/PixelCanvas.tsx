@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Tool, PixelData, Layer, LayerType } from '../App';
 import { ColorTableEntry } from './ColorTable';
-import { paletteApi, PixelArtCache } from '../services/paletteApi';
+import { paletteApi } from '../services/paletteApi';
 import { hexToRgb } from '../utils/colorUtils';
 import './PixelCanvas.css';
 
@@ -25,6 +25,16 @@ interface PixelCanvasProps {
   colorTable: ColorTableEntry[];
   onExportReady?: (exportFunction: () => HTMLCanvasElement | null) => void;
   onPixelUpdateReady?: (updateFunction: (layerType: LayerType, oldColor: string, newColor: string) => void) => void;
+  // Background pattern settings
+  patternSize?: number;
+  patternOpacity?: number;
+  patternAnimationSpeed?: number;
+  patternType?: string;
+  patternColor?: string;
+  backgroundColor?: string;
+  patternAnimationType?: string;
+  // Channel value mode
+  channelValueMode?: boolean;
 }
 
 const PixelCanvas: React.FC<PixelCanvasProps> = ({
@@ -44,7 +54,15 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   layers,
   colorTable,
   onExportReady,
-  onPixelUpdateReady
+  onPixelUpdateReady,
+  patternSize = 24,
+  patternOpacity = 0.6,
+  patternAnimationSpeed = 30,
+  patternType = 'diagonal',
+  patternColor = '#000000',
+  backgroundColor = '#ffffff',
+  patternAnimationType = 'waves',
+  channelValueMode = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const redCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,6 +90,95 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   const [hoveredPixels, setHoveredPixels] = useState<Set<string>>(new Set());
   const [originalPixelColors, setOriginalPixelColors] = useState<Map<string, string>>(new Map());
   const [isAutoSaving, setIsAutoSaving] = useState<boolean>(false);
+  const [pixelColorMap, setPixelColorMap] = useState<Map<string, string>>(new Map());
+
+  // Simple initialize pixelColorMap from existing canvas data
+  const initializePixelColorMap = useCallback(() => {
+    if (pixelColorMap.size > 0) return;
+    
+    const redCanvas = redCanvasRef.current;
+    const greenCanvas = greenCanvasRef.current;
+    const blueCanvas = blueCanvasRef.current;
+    
+    if (!redCanvas || !greenCanvas || !blueCanvas) return;
+    
+    const redCtx = redCanvas.getContext('2d');
+    const greenCtx = greenCanvas.getContext('2d');
+    const blueCtx = blueCanvas.getContext('2d');
+    
+    if (!redCtx || !greenCtx || !blueCtx) return;
+    
+    const newPixelColorMap = new Map<string, string>();
+    
+    const layers = [
+      { ctx: redCtx, layerType: 'red' as LayerType },
+      { ctx: greenCtx, layerType: 'green' as LayerType },
+      { ctx: blueCtx, layerType: 'blue' as LayerType }
+    ];
+    
+    layers.forEach(({ ctx, layerType }) => {
+      const imageData = ctx.getImageData(0, 0, width, height);
+      
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const r = imageData.data[i];
+        const g = imageData.data[i + 1];
+        const b = imageData.data[i + 2];
+        const a = imageData.data[i + 3];
+        
+        if (a === 0) continue;
+        
+        const x = (i / 4) % width;
+        const y = Math.floor((i / 4) / width);
+        const pixelKey = `${layerType}-${x}-${y}`;
+        
+        const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        newPixelColorMap.set(pixelKey, hex);
+      }
+    });
+    
+    setPixelColorMap(newPixelColorMap);
+  }, [width, height, pixelColorMap.size]);
+
+  // Update CSS animations dynamically
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pattern-waves {
+        0% { background-position: 0 0; }
+        25% { background-position: ${patternSize}px ${patternSize * 0.5}px; }
+        50% { background-position: ${patternSize * 0.5}px ${patternSize}px; }
+        75% { background-position: ${patternSize}px ${patternSize * 0.5}px; }
+        100% { background-position: 0 0; }
+      }
+      
+      @keyframes pattern-twitchy {
+        0% { background-position: 0 0; }
+        10% { background-position: ${patternSize * 0.2}px ${patternSize * 0.1}px; }
+        20% { background-position: ${patternSize * 0.8}px ${patternSize * 0.3}px; }
+        30% { background-position: ${patternSize * 0.1}px ${patternSize * 0.9}px; }
+        40% { background-position: ${patternSize * 0.9}px ${patternSize * 0.2}px; }
+        50% { background-position: ${patternSize * 0.3}px ${patternSize * 0.7}px; }
+        60% { background-position: ${patternSize * 0.7}px ${patternSize * 0.1}px; }
+        70% { background-position: ${patternSize * 0.1}px ${patternSize * 0.8}px; }
+        80% { background-position: ${patternSize * 0.6}px ${patternSize * 0.4}px; }
+        90% { background-position: ${patternSize * 0.4}px ${patternSize * 0.6}px; }
+        100% { background-position: 0 0; }
+      }
+      
+      @keyframes pattern-softmove {
+        0% { background-position: 0 0; }
+        33% { background-position: ${patternSize * 0.3}px ${patternSize * 0.7}px; }
+        66% { background-position: ${patternSize * 0.7}px ${patternSize * 0.3}px; }
+        100% { background-position: 0 0; }
+      }
+      
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [patternSize]);
 
   // Convert ImageData to base64 string
   const imageDataToBase64 = useCallback((imageData: ImageData): string => {
@@ -137,19 +244,14 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
       const blueBase64 = imageDataToBase64(blueData);
       
       // Create cache object
-      const cache: PixelArtCache = {
-        layers: {
-          red: redBase64,
-          green: greenBase64,
-          blue: blueBase64
-        },
-        canvasSize: width,
-        lastModified: new Date().toISOString()
+      const layers = {
+        red: redBase64,
+        green: greenBase64,
+        blue: blueBase64
       };
       
-      // Skip server features if server is not available
-      // This prevents endless connection attempts
-      // await paletteApi.savePixelArtCache(cache);
+      // Save to server cache
+      await paletteApi.savePixelArtCache(layers, width);
     } catch (error) {
       console.error('Error auto-saving pixel art:', error);
     } finally {
@@ -160,12 +262,9 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
   // Load pixel art from server cache
   const loadPixelArtFromCache = useCallback(async () => {
     try {
-      // Skip server features if server is not available
-      // This prevents endless connection attempts
-      return;
-      
       const cache = await paletteApi.getPixelArtCache();
       if (!cache || !cache.layers.red || !cache.layers.green || !cache.layers.blue) {
+        console.log('No cached pixel art found on server');
         return; // No cached data
       }
       
@@ -208,30 +307,35 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         blue: blueCtx.getImageData(0, 0, width, height)
       });
       
+      // Initialize pixelColorMap from loaded data
+      setTimeout(() => {
+        initializePixelColorMap();
+      }, 100);
+      
+      console.log('🖼️ Successfully loaded pixel art from server cache');
+      
     } catch (error) {
       console.error('Error loading pixel art from cache:', error);
     }
-  }, [width, height]);
+  }, [width, height, initializePixelColorMap]);
 
   // Convert current color to grayscale channel value based on current layer
   const getChannelValueFromColor = useCallback((color: string): number => {
-    // First check if the color exists in the color table
+    // Find the color in the color table
     const colorTableEntry = colorTable.find(entry => entry.color.toLowerCase() === color.toLowerCase());
     if (colorTableEntry) {
-      switch (currentLayer) {
-        case 'red': return colorTableEntry.redChannel;
-        case 'green': return colorTableEntry.greenChannel;
-        case 'blue': return colorTableEntry.blueChannel;
-        default: return 0;
+      const layerFromId = colorTableEntry.id.split('-')[1] as 'red' | 'green' | 'blue';
+      if (layerFromId === currentLayer && colorTableEntry.channelValue !== undefined) {
+        return colorTableEntry.channelValue;
       }
     }
 
-    // If not found in color table, convert hex to RGB and use the appropriate channel
+    // Fallback: use RGB values from the color
     const hex = color.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-
+    
     switch (currentLayer) {
       case 'red': return r;
       case 'green': return g;
@@ -242,9 +346,63 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
   // Convert channel value to grayscale color
   const getGrayscaleColorFromChannel = useCallback((channelValue: number): string => {
-    const hex = channelValue.toString(16).padStart(2, '0');
+    const clampedValue = Math.max(0, Math.min(255, channelValue));
+    const hex = clampedValue.toString(16).padStart(2, '0');
     return `#${hex}${hex}${hex}`;
   }, []);
+
+  // Re-render canvas when channelValueMode changes
+  useEffect(() => {
+    console.log('🔄 ChannelValue mode changed:', channelValueMode);
+    
+    const redCanvas = redCanvasRef.current;
+    const greenCanvas = greenCanvasRef.current;
+    const blueCanvas = blueCanvasRef.current;
+    
+    if (!redCanvas || !greenCanvas || !blueCanvas) return;
+    
+    const redCtx = redCanvas.getContext('2d');
+    const greenCtx = greenCanvas.getContext('2d');
+    const blueCtx = blueCanvas.getContext('2d');
+    
+    if (!redCtx || !greenCtx || !blueCtx) return;
+    
+    // Clear all canvases
+    redCtx.clearRect(0, 0, width, height);
+    greenCtx.clearRect(0, 0, width, height);
+    blueCtx.clearRect(0, 0, width, height);
+    
+    // Re-draw all pixels with the new mode
+    pixelColorMap.forEach((originalColor, pixelKey) => {
+      const [layer, xStr, yStr] = pixelKey.split('-');
+      const x = parseInt(xStr);
+      const y = parseInt(yStr);
+      const layerType = layer as LayerType;
+      
+      // Get the appropriate canvas and context
+      const canvas = layerType === 'red' ? redCanvas : layerType === 'green' ? greenCanvas : blueCanvas;
+      const ctx = layerType === 'red' ? redCtx : layerType === 'green' ? greenCtx : blueCtx;
+      
+      // Apply the new mode
+      if (channelValueMode) {
+        const channelValue = getChannelValueFromColor(originalColor);
+        const grayscaleColor = getGrayscaleColorFromChannel(channelValue);
+        ctx.fillStyle = grayscaleColor;
+      } else {
+        ctx.fillStyle = originalColor;
+      }
+      
+      // Draw the pixel
+      ctx.fillRect(x, y, 1, 1);
+    });
+    
+    // Update layer image data
+    setLayerImageData({
+      red: redCtx.getImageData(0, 0, width, height),
+      green: greenCtx.getImageData(0, 0, width, height),
+      blue: blueCtx.getImageData(0, 0, width, height)
+    });
+  }, [channelValueMode, width, height, pixelColorMap, getChannelValueFromColor, getGrayscaleColorFromChannel]);
 
   // Export function to convert colorful layers to channel-based image
   const exportToChannels = useCallback(() => {
@@ -543,23 +701,33 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     if (!ctx) return;
 
     // Remove hover effect from this pixel if it exists
-    const pixelKey = `${x},${y}`;
+    const hoverPixelKey = `${x},${y}`;
     setHoveredPixels(prev => {
-      if (prev.has(pixelKey)) {
+      if (prev.has(hoverPixelKey)) {
         setOriginalPixelColors(prevColors => {
           const newMap = new Map(prevColors);
-          newMap.delete(pixelKey);
+          newMap.delete(hoverPixelKey);
           return newMap;
         });
         const newSet = new Set(prev);
-        newSet.delete(pixelKey);
+        newSet.delete(hoverPixelKey);
         return newSet;
       }
       return prev;
     });
 
-    // Use the original color directly (no conversion to grayscale)
-    ctx.fillStyle = color;
+    // Store the original color for this pixel (simplified)
+    const colorPixelKey = `${currentLayer}-${x}-${y}`;
+    setPixelColorMap(prev => new Map(prev.set(colorPixelKey, color)));
+    
+    // Use channelValue mode if enabled, otherwise use original color
+    if (channelValueMode) {
+      const channelValue = getChannelValueFromColor(color);
+      const grayscaleColor = getGrayscaleColorFromChannel(channelValue);
+      ctx.fillStyle = grayscaleColor;
+    } else {
+      ctx.fillStyle = color;
+    }
     ctx.fillRect(x, y, 1, 1);
 
     // Update layer image data
@@ -571,7 +739,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     
     // Auto-save after drawing
     autoSavePixelArt();
-  }, [getCurrentLayerCanvas, width, height, currentLayer, autoSavePixelArt]);
+  }, [getCurrentLayerCanvas, width, height, currentLayer, autoSavePixelArt, getChannelValueFromColor, getGrayscaleColorFromChannel, channelValueMode]);
 
   const drawBrush = useCallback((x: number, y: number, color: string, size: number) => {
     const canvas = getCurrentLayerCanvas().current;
@@ -580,8 +748,15 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Use the original color directly (no conversion to grayscale)
-    ctx.fillStyle = color;
+    // Use channelValue mode if enabled, otherwise use original color
+    if (channelValueMode) {
+      const channelValue = getChannelValueFromColor(color);
+      const grayscaleColor = getGrayscaleColorFromChannel(channelValue);
+      ctx.fillStyle = grayscaleColor;
+    } else {
+      ctx.fillStyle = color;
+    }
+    
     
     // For size 1: draw 1 pixel
     // For size 2: draw 2x2 pixels
@@ -596,20 +771,24 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         
         if (px >= 0 && px < width && py >= 0 && py < height) {
           // Remove hover effect from this pixel if it exists
-          const pixelKey = `${px},${py}`;
+          const hoverPixelKey = `${px},${py}`;
           setHoveredPixels(prev => {
-            if (prev.has(pixelKey)) {
+            if (prev.has(hoverPixelKey)) {
               setOriginalPixelColors(prevColors => {
                 const newMap = new Map(prevColors);
-                newMap.delete(pixelKey);
+                newMap.delete(hoverPixelKey);
                 return newMap;
               });
               const newSet = new Set(prev);
-              newSet.delete(pixelKey);
+              newSet.delete(hoverPixelKey);
               return newSet;
             }
             return prev;
           });
+          
+          // Store the original color for this pixel
+          const colorPixelKey = `${currentLayer}-${px}-${py}`;
+          setPixelColorMap(prev => new Map(prev.set(colorPixelKey, color)));
           
           // Set pixel with full opacity
           ctx.fillRect(px, py, 1, 1);
@@ -626,7 +805,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     
     // Auto-save after drawing
     autoSavePixelArt();
-  }, [width, height, getCurrentLayerCanvas, currentLayer, autoSavePixelArt]);
+  }, [width, height, getCurrentLayerCanvas, currentLayer, autoSavePixelArt, getChannelValueFromColor, getGrayscaleColorFromChannel, channelValueMode, setPixelColorMap]);
 
   const erasePixel = useCallback((x: number, y: number, size: number) => {
     const canvas = getCurrentLayerCanvas().current;
@@ -652,19 +831,27 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
         
         if (px >= 0 && px < width && py >= 0 && py < height) {
           // Remove hover effect from this pixel if it exists
-          const pixelKey = `${px},${py}`;
+          const hoverPixelKey = `${px},${py}`;
           setHoveredPixels(prev => {
-            if (prev.has(pixelKey)) {
+            if (prev.has(hoverPixelKey)) {
               setOriginalPixelColors(prevColors => {
                 const newMap = new Map(prevColors);
-                newMap.delete(pixelKey);
+                newMap.delete(hoverPixelKey);
                 return newMap;
               });
               const newSet = new Set(prev);
-              newSet.delete(pixelKey);
+              newSet.delete(hoverPixelKey);
               return newSet;
             }
             return prev;
+          });
+          
+          // Remove the pixel from pixelColorMap when erasing
+          const colorPixelKey = `${currentLayer}-${px}-${py}`;
+          setPixelColorMap(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(colorPixelKey);
+            return newMap;
           });
           
           // Calculate pixel index in image data
@@ -687,7 +874,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     
     // Auto-save after erasing
     autoSavePixelArt();
-  }, [width, height, getCurrentLayerCanvas, currentLayer, autoSavePixelArt]);
+  }, [width, height, getCurrentLayerCanvas, currentLayer, autoSavePixelArt, setPixelColorMap]);
 
   // Get pixel color from current layer
   const getPixelColorFromLayer = useCallback((x: number, y: number): string => {
@@ -1053,7 +1240,6 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
       if (pos) {
         setIsDrawing(true);
         const { x, y } = pos;
-
         switch (currentTool) {
           case 'brush':
             if (currentColor) {
@@ -1186,6 +1372,11 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
     // Save state when finishing drawing
     if (isDrawing) {
       saveState();
+    }
+    
+    // Auto-save to server cache and PNG files after mouse up (for all tools)
+    if (isDrawing || isMouseDown) {
+      autoSavePixelArt();
     }
     
     setIsMouseDown(false);
@@ -1339,6 +1530,65 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
             }}
           />
         )}
+
+        {/* Pattern background layer - not zoomed, fixed size */}
+        <div
+          className="pixel-canvas-pattern"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: `translate(-50%, -50%) translate(${panOffset.x}px, ${panOffset.y}px)`,
+            width: width * zoom,
+            height: height * zoom,
+            zIndex: 0,
+            backgroundImage: (() => {
+              // Convert hex colors to RGB
+              const patternHex = patternColor.replace('#', '');
+              const patternR = parseInt(patternHex.substr(0, 2), 16);
+              const patternG = parseInt(patternHex.substr(2, 2), 16);
+              const patternB = parseInt(patternHex.substr(4, 2), 16);
+              const patternRgba = `rgba(${patternR},${patternG},${patternB},${patternOpacity})`;
+              
+              const bgHex = backgroundColor.replace('#', '');
+              const bgR = parseInt(bgHex.substr(0, 2), 16);
+              const bgG = parseInt(bgHex.substr(2, 2), 16);
+              const bgB = parseInt(bgHex.substr(4, 2), 16);
+              const bgRgba = `rgba(${bgR},${bgG},${bgB},1)`;
+              
+              switch (patternType) {
+                case 'dots':
+                  return `radial-gradient(circle at ${patternSize / 8}px ${patternSize / 8}px, ${patternRgba} ${patternSize / 16}px, ${bgRgba} ${patternSize / 16}px)`;
+                case 'diamonds':
+                  return `
+                    linear-gradient(45deg, ${patternRgba} 25%, ${bgRgba} 25%),
+                    linear-gradient(-45deg, ${patternRgba} 25%, ${bgRgba} 25%),
+                    linear-gradient(45deg, ${bgRgba} 75%, ${patternRgba} 75%),
+                    linear-gradient(-45deg, ${bgRgba} 75%, ${patternRgba} 75%)
+                  `;
+                case 'squares':
+                  return `
+                    linear-gradient(0deg, ${patternRgba} 25%, ${bgRgba} 25%),
+                    linear-gradient(90deg, ${patternRgba} 25%, ${bgRgba} 25%)
+                  `;
+                case 'circles':
+                  return `radial-gradient(circle at center, ${patternRgba} ${patternSize / 8}px, ${bgRgba} ${patternSize / 8}px)`;
+                case 'crosses':
+                  return `
+                    linear-gradient(0deg, ${patternRgba} 1px, ${bgRgba} 1px),
+                    linear-gradient(90deg, ${patternRgba} 1px, ${bgRgba} 1px)
+                  `;
+                case 'diagonal':
+                default:
+                  return `repeating-linear-gradient(45deg, ${bgRgba}, ${bgRgba} ${patternSize / 4}px, ${patternRgba} ${patternSize / 4}px, ${patternRgba} ${patternSize / 2}px)`;
+              }
+            })(),
+            backgroundSize: `${patternSize}px ${patternSize}px`,
+            backgroundPosition: '0 0',
+            animation: `pattern-${patternAnimationType} ${patternAnimationSpeed}s ease-in-out infinite`,
+            pointerEvents: 'none'
+          }}
+        />
         
         <div style={{
           position: 'relative',
@@ -1347,23 +1597,14 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
           width: width,
           height: height
         }}>
-          {/* Gradient background layer */}
-          <div
-            className="pixel-canvas pixel-canvas-gradient"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: width,
-              height: height,
-              zIndex: 0
-            }}
-          />
+          {/* Gradient background layer - removed, now using separate pattern layer */}
           
           {/* Background canvas (white) */}
           <canvas
             ref={canvasRef}
             className="pixel-canvas pixel-canvas-background"
+            width={width}
+            height={height}
             style={{
               position: 'absolute',
               top: 0,
@@ -1371,7 +1612,7 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
               width: width,
               height: height,
               imageRendering: 'pixelated' as const,
-              border: showGrid ? '1px solid #666' : '1px solid #444',
+              border: 'none',
               display: 'block',
               zIndex: 1
             }}
@@ -1382,6 +1623,9 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
           <canvas
             ref={redCanvasRef}
             className="pixel-canvas pixel-canvas-layer"
+            data-layer="red"
+            width={width}
+            height={height}
             style={{
               position: 'absolute',
               top: 0,
@@ -1399,6 +1643,9 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
           <canvas
             ref={greenCanvasRef}
             className="pixel-canvas pixel-canvas-layer"
+            data-layer="green"
+            width={width}
+            height={height}
             style={{
               position: 'absolute',
               top: 0,
@@ -1416,6 +1663,9 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
           <canvas
             ref={blueCanvasRef}
             className="pixel-canvas pixel-canvas-layer"
+            data-layer="blue"
+            width={width}
+            height={height}
             style={{
               position: 'absolute',
               top: 0,
@@ -1433,6 +1683,8 @@ const PixelCanvas: React.FC<PixelCanvasProps> = ({
           <canvas
             ref={hoverCanvasRef}
             className="pixel-canvas pixel-canvas-layer"
+            width={width}
+            height={height}
             style={{
               position: 'absolute',
               top: 0,

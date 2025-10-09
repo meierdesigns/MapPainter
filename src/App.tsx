@@ -44,11 +44,46 @@ const App: React.FC = () => {
     const savedZoom = localStorage.getItem('pixel-painter-zoom');
     return savedZoom ? parseFloat(savedZoom) : 2;
   });
-  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [showGrid, setShowGrid] = useState<boolean>(() => {
+    const savedShowGrid = localStorage.getItem('pixel-painter-show-grid');
+    return savedShowGrid ? JSON.parse(savedShowGrid) : true;
+  });
   const [gridColor, setGridColor] = useState<string>('#b3d9ff');
   const [gridThickness, setGridThickness] = useState<number>(() => {
     const savedThickness = localStorage.getItem('pixel-painter-grid-thickness');
     return savedThickness ? parseInt(savedThickness) : 1;
+  });
+  const [patternSize, setPatternSize] = useState<number>(() => {
+    const savedPatternSize = localStorage.getItem('pixel-painter-pattern-size');
+    return savedPatternSize ? parseInt(savedPatternSize) : 24;
+  });
+  const [patternOpacity, setPatternOpacity] = useState<number>(() => {
+    const savedPatternOpacity = localStorage.getItem('pixel-painter-pattern-opacity');
+    return savedPatternOpacity ? parseFloat(savedPatternOpacity) : 0.6;
+  });
+  const [patternAnimationSpeed, setPatternAnimationSpeed] = useState<number>(() => {
+    const savedPatternAnimationSpeed = localStorage.getItem('pixel-painter-pattern-animation-speed');
+    return savedPatternAnimationSpeed ? parseInt(savedPatternAnimationSpeed) : 30;
+  });
+  const [patternType, setPatternType] = useState<string>(() => {
+    const savedPatternType = localStorage.getItem('pixel-painter-pattern-type');
+    return savedPatternType || 'diagonal';
+  });
+  const [patternColor, setPatternColor] = useState<string>(() => {
+    const savedPatternColor = localStorage.getItem('pixel-painter-pattern-color');
+    return savedPatternColor || '#000000';
+  });
+  const [backgroundColor, setBackgroundColor] = useState<string>(() => {
+    const savedBackgroundColor = localStorage.getItem('pixel-painter-background-color');
+    return savedBackgroundColor || '#ffffff';
+  });
+  const [patternAnimationType, setPatternAnimationType] = useState<string>(() => {
+    const savedPatternAnimationType = localStorage.getItem('pixel-painter-pattern-animation-type');
+    return savedPatternAnimationType || 'waves';
+  });
+  const [channelValueMode, setChannelValueMode] = useState<boolean>(() => {
+    const savedChannelValueMode = localStorage.getItem('pixel-painter-channel-value-mode');
+    return savedChannelValueMode ? JSON.parse(savedChannelValueMode) : true;
   });
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
@@ -76,57 +111,68 @@ const App: React.FC = () => {
       palette: []
     }
   ]);
-  const [serverConnected, setServerConnected] = useState<boolean>(false);
   const [colorTable, setColorTable] = useState<ColorTableEntry[]>([]);
 
-  // Central function to update color table and JSON file
-  const updateColorTableAndJson = useCallback((newColorTable: ColorTableEntry[]) => {
-    setColorTable(newColorTable);
-    
-    // Update JSON file via server
-    fetch('http://localhost:3001/api/color-tables', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        red: newColorTable.filter(entry => entry.id.includes('red')),
-        green: newColorTable.filter(entry => entry.id.includes('green')),
-        blue: newColorTable.filter(entry => entry.id.includes('blue'))
-      })
-    }).then(response => {
-      if (response.ok) {
-        console.log('🔧 App: Successfully updated colorTables.json via server');
-      } else {
-        console.error('🔧 App: Failed to update colorTables.json via server');
+  // Central function to update color table and localStorage
+  const updateColorTableAndJson = useCallback((newColorTable: ColorTableEntry[] | ((prev: ColorTableEntry[]) => ColorTableEntry[])) => {
+    // Handle both direct array and functional update
+    setColorTable(prevTable => {
+      const actualColorTable = typeof newColorTable === 'function' 
+        ? newColorTable(prevTable) 
+        : newColorTable;
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem('pixel-painter-color-table', JSON.stringify(actualColorTable));
+        console.log('🔧 App: Successfully updated color table in localStorage');
+      } catch (error) {
+        console.error('🔧 App: Error saving color table to localStorage:', error);
       }
-    }).catch(error => {
-      console.error('🔧 App: Error updating colorTables.json:', error);
+      
+      // Also update the ColorTableService to sync with JSON file
+      import('./services/colorTableService').then(({ colorTableService }) => {
+        // Update the service with the new color table data
+        colorTableService.updateColorTableFromArray(actualColorTable);
+        
+        // Trigger JSON file update
+        colorTableService.updateColorTablesJson().catch(error => {
+          console.error('🔧 App: Error updating color tables JSON:', error);
+        });
+      }).catch(error => {
+        console.error('🔧 App: Error importing ColorTableService:', error);
+      });
+      
+      return actualColorTable;
     });
   }, []);
 
-  // Load initial color table data from server
+  // Toggle channel value mode
+  const handleChannelValueModeToggle = useCallback(() => {
+    setChannelValueMode(prevMode => {
+      const newMode = !prevMode;
+      console.log('🔄 ChannelValue Toggle:', { oldMode: prevMode, newMode });
+      localStorage.setItem('pixel-painter-channel-value-mode', JSON.stringify(newMode));
+      return newMode;
+    });
+  }, []);
+
+  // Load initial color table data from localStorage (server dependency removed)
   useEffect(() => {
-    const loadInitialColorTable = async () => {
+    const loadInitialColorTable = () => {
       try {
-        const response = await fetch('http://localhost:3001/api/color-tables');
-        if (response.ok) {
-          const serverData = await response.json();
-          
-          // Convert server data to flat array format
-          const flatColorTable: ColorTableEntry[] = [
-            ...serverData.red,
-            ...serverData.green,
-            ...serverData.blue
-          ];
-          
-          setColorTable(flatColorTable);
-          console.log('🔧 App: Loaded initial color table from server', flatColorTable);
+        const savedColorTable = localStorage.getItem('pixel-painter-color-table');
+        if (savedColorTable) {
+          const colorTableData = JSON.parse(savedColorTable);
+          setColorTable(colorTableData);
+          console.log('🔧 App: Loaded initial color table from localStorage', colorTableData);
         } else {
-          console.error('🔧 App: Failed to load initial color table from server');
+          // Initialize with empty color table if none exists
+          setColorTable([]);
+          console.log('🔧 App: No color table found, initialized with empty array');
         }
       } catch (error) {
-        console.error('🔧 App: Error loading initial color table:', error);
+        console.error('🔧 App: Error loading initial color table from localStorage:', error);
+        setColorTable([]);
       }
     };
     
@@ -172,12 +218,49 @@ const App: React.FC = () => {
   }, []);
 
   const handleGridToggle = useCallback(() => {
-    setShowGrid(!showGrid);
+    const newShowGrid = !showGrid;
+    setShowGrid(newShowGrid);
+    localStorage.setItem('pixel-painter-show-grid', JSON.stringify(newShowGrid));
   }, [showGrid]);
 
   const handleGridThicknessChange = useCallback((thickness: number) => {
     setGridThickness(thickness);
     localStorage.setItem('pixel-painter-grid-thickness', thickness.toString());
+  }, []);
+
+  const handlePatternSizeChange = useCallback((size: number) => {
+    setPatternSize(size);
+    localStorage.setItem('pixel-painter-pattern-size', size.toString());
+  }, []);
+
+  const handlePatternOpacityChange = useCallback((opacity: number) => {
+    setPatternOpacity(opacity);
+    localStorage.setItem('pixel-painter-pattern-opacity', opacity.toString());
+  }, []);
+
+  const handlePatternAnimationSpeedChange = useCallback((speed: number) => {
+    setPatternAnimationSpeed(speed);
+    localStorage.setItem('pixel-painter-pattern-animation-speed', speed.toString());
+  }, []);
+
+  const handlePatternTypeChange = useCallback((type: string) => {
+    setPatternType(type);
+    localStorage.setItem('pixel-painter-pattern-type', type);
+  }, []);
+
+  const handlePatternColorChange = useCallback((color: string) => {
+    setPatternColor(color);
+    localStorage.setItem('pixel-painter-pattern-color', color);
+  }, []);
+
+  const handleBackgroundColorChange = useCallback((color: string) => {
+    setBackgroundColor(color);
+    localStorage.setItem('pixel-painter-background-color', color);
+  }, []);
+
+  const handlePatternAnimationTypeChange = useCallback((type: string) => {
+    setPatternAnimationType(type);
+    localStorage.setItem('pixel-painter-pattern-animation-type', type);
   }, []);
 
   const handleHistoryUpdate = useCallback((imageData: ImageData) => {
@@ -406,18 +489,23 @@ const App: React.FC = () => {
       ]
     };
 
+    console.log('🎨 Initializing default palettes:', defaultPalettes);
+
     setLayers(prevLayers => 
       prevLayers.map((layer, index) => {
         const layerName = layer.name.toLowerCase();
+        const palette = defaultPalettes[layerName as keyof typeof defaultPalettes] || [];
+        console.log(`🎨 Setting palette for ${layerName}:`, palette);
         return {
           ...layer,
-          palette: defaultPalettes[layerName as keyof typeof defaultPalettes] || []
+          palette: palette
         };
       })
     );
 
     // Save to localStorage
     localStorage.setItem('pixel-painter-palettes', JSON.stringify(defaultPalettes));
+    console.log('🎨 Saved default palettes to localStorage');
   }, []);
 
   // Load palettes and app state from localStorage on component mount
@@ -437,8 +525,10 @@ const App: React.FC = () => {
               };
             })
           );
+          console.log('🎨 Loaded palettes from localStorage:', palettes);
         } else {
           // Initialize default palettes if none exist
+          console.log('🎨 No saved palettes found, initializing defaults');
           initializeDefaultPalettes();
         }
 
@@ -479,7 +569,6 @@ const App: React.FC = () => {
     };
 
     loadStateFromStorage();
-    setServerConnected(false); // Server is disabled
   }, []);
 
   // Auto-select first color from current layer's palette on app start
@@ -487,12 +576,27 @@ const App: React.FC = () => {
     const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
     const layerPalette = layers[layerIndex]?.palette || [];
     
-    // Only auto-select if no color is currently selected and palette has colors
+    // Always auto-select first color if palette has colors and no color is selected
     if (!currentColor && layerPalette.length > 0) {
       const firstColor = layerPalette[0].color;
       setCurrentColor(firstColor);
+      console.log('🎨 Auto-selected first color from palette:', firstColor);
     }
   }, [currentLayer, layers, currentColor]);
+
+  // Force auto-select color when layers are loaded
+  useEffect(() => {
+    if (layers.length > 0) {
+      const layerIndex = currentLayer === 'red' ? 0 : currentLayer === 'green' ? 1 : 2;
+      const layerPalette = layers[layerIndex]?.palette || [];
+      
+      if (layerPalette.length > 0 && !currentColor) {
+        const firstColor = layerPalette[0].color;
+        setCurrentColor(firstColor);
+        console.log('🎨 Force auto-selected first color from loaded palette:', firstColor);
+      }
+    }
+  }, [layers, currentLayer, currentColor]);
 
   // Save palettes to localStorage when they change
   useEffect(() => {
@@ -548,15 +652,11 @@ const App: React.FC = () => {
       <header className="app-header">
         <h1>Pixel Painter</h1>
         <div className="app-controls">
-          <div className="server-status">
-            <span className="status-indicator local-storage">
-              <span className="material-icons">storage</span>
-              Lokale Speicherung
-            </span>
-          </div>
           <FileOperations 
             canvasSize={canvasSize}
             onCanvasSizeChange={handleCanvasSizeChange}
+            layers={layers}
+            colorTable={colorTable}
           />
         </div>
       </header>
@@ -577,6 +677,22 @@ const App: React.FC = () => {
           onRedo={handleRedo}
           canUndo={historyIndex > 0}
           canRedo={historyIndex < history.length - 1}
+          patternSize={patternSize}
+          patternOpacity={patternOpacity}
+          patternAnimationSpeed={patternAnimationSpeed}
+          patternType={patternType}
+          patternColor={patternColor}
+          backgroundColor={backgroundColor}
+          patternAnimationType={patternAnimationType}
+          onPatternSizeChange={handlePatternSizeChange}
+          onPatternOpacityChange={handlePatternOpacityChange}
+          onPatternAnimationSpeedChange={handlePatternAnimationSpeedChange}
+          onPatternTypeChange={handlePatternTypeChange}
+          onPatternColorChange={handlePatternColorChange}
+          onBackgroundColorChange={handleBackgroundColorChange}
+          onPatternAnimationTypeChange={handlePatternAnimationTypeChange}
+          channelValueMode={channelValueMode}
+          onChannelValueModeToggle={handleChannelValueModeToggle}
         />
       </div>
       
@@ -650,6 +766,14 @@ const App: React.FC = () => {
             layers={layers}
             colorTable={colorTable}
             onPixelUpdateReady={handlePixelUpdateReady}
+            patternSize={patternSize}
+            patternOpacity={patternOpacity}
+            patternAnimationSpeed={patternAnimationSpeed}
+            patternType={patternType}
+            patternColor={patternColor}
+            backgroundColor={backgroundColor}
+            patternAnimationType={patternAnimationType}
+            channelValueMode={channelValueMode}
           />
         </div>
       </div>

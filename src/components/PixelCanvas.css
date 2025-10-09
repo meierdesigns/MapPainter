@@ -3,21 +3,37 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #1a1a1a;
+  background-color: transparent;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.canvas-wrapper {
+  background-color: transparent;
 }
 
 .pixel-canvas {
   cursor: crosshair;
-  background-color: #ffffff;
+  background-color: transparent;
   border-radius: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pixel-canvas-background {
+  background-color: transparent;
+}
+
+.pixel-canvas-gradient {
+  background-image: 
+    repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px);
+  background-size: 2px 2px;
+  background-attachment: fixed;
+  opacity: 1.0;
+  border-radius: 0;
+  image-rendering: pixelated;
 }
 
 .pixel-canvas:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  /* No shadow on hover */
 }
 
 /* Tool-specific cursors */
@@ -53,4 +69,14 @@
   z-index: 1 !important;
   background-color: transparent !important;
   box-shadow: none !important;
+}
+
+/* Pattern animation */
+@keyframes pattern-drift {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 24px 24px;
+  }
 }

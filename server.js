@@ -9,6 +9,8 @@ const app = express();
 const PORT = 3001;
 const PALETTES_FILE = path.join(__dirname, 'palettes.json');
 const COLOR_TABLES_FILE = path.join(__dirname, 'src', 'data', 'colorTables.json');
+const IMAGE_CACHE_FILE = path.join(__dirname, 'image-cache.json');
+const IMAGES_FOLDER = path.join(__dirname, 'images');
 
 // Middleware
 app.use(cors());
@@ -105,6 +107,154 @@ async function saveColorTables(colorTables) {
     return true;
   } catch (error) {
     console.error('Error saving color tables:', error);
+    return false;
+  }
+}
+
+// Load image cache from file
+async function loadImageCache() {
+  try {
+    const data = await fs.readFile(IMAGE_CACHE_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.log('No image cache file found, creating new one');
+    return {
+      layers: {
+        red: null,
+        green: null,
+        blue: null
+      },
+      timestamp: null,
+      canvasSize: 16
+    };
+  }
+}
+
+// Save image cache to file
+async function saveImageCache(cacheData) {
+  try {
+    await fs.writeFile(IMAGE_CACHE_FILE, JSON.stringify(cacheData, null, 2));
+    console.log('🖼️ Server: Successfully saved image cache');
+    return true;
+  } catch (error) {
+    console.error('Error saving image cache:', error);
+    return false;
+  }
+}
+
+// Clear image cache
+async function clearImageCache() {
+  try {
+    await fs.unlink(IMAGE_CACHE_FILE);
+    console.log('🗑️ Server: Image cache cleared');
+    return true;
+  } catch (error) {
+    // File might not exist, which is fine
+    console.log('Image cache file not found, nothing to clear');
+    return true;
+  }
+}
+
+// Ensure images folder exists
+async function ensureImagesFolder() {
+  try {
+    await fs.mkdir(IMAGES_FOLDER, { recursive: true });
+  } catch (error) {
+    console.error('Error creating images folder:', error);
+  }
+}
+
+// Save PNG files to images folder (overwrite existing files)
+async function savePngFiles(layers, canvasSize) {
+  try {
+    await ensureImagesFolder();
+    
+    // Save each layer as PNG (always use the same filenames)
+    const redBuffer = Buffer.from(layers.red, 'base64');
+    const greenBuffer = Buffer.from(layers.green, 'base64');
+    const blueBuffer = Buffer.from(layers.blue, 'base64');
+    
+    const redPath = path.join(IMAGES_FOLDER, 'layer-red-current.png');
+    const greenPath = path.join(IMAGES_FOLDER, 'layer-green-current.png');
+    const bluePath = path.join(IMAGES_FOLDER, 'layer-blue-current.png');
+    
+    await Promise.all([
+      fs.writeFile(redPath, redBuffer),
+      fs.writeFile(greenPath, greenBuffer),
+      fs.writeFile(bluePath, blueBuffer)
+    ]);
+    
+    console.log('🖼️ Server: PNG files updated in images folder');
+    return {
+      red: 'layer-red-current.png',
+      green: 'layer-green-current.png',
+      blue: 'layer-blue-current.png'
+    };
+  } catch (error) {
+    console.error('Error saving PNG files:', error);
+    return null;
+  }
+}
+
+// Load PNG files from images folder
+async function loadPngFiles() {
+  try {
+    const redPath = path.join(IMAGES_FOLDER, 'layer-red-current.png');
+    const greenPath = path.join(IMAGES_FOLDER, 'layer-green-current.png');
+    const bluePath = path.join(IMAGES_FOLDER, 'layer-blue-current.png');
+    
+    // Check if all three files exist
+    try {
+      await Promise.all([
+        fs.access(redPath),
+        fs.access(greenPath),
+        fs.access(bluePath)
+      ]);
+    } catch (error) {
+      // Files don't exist
+      return null;
+    }
+    
+    const redBuffer = await fs.readFile(redPath);
+    const greenBuffer = await fs.readFile(greenPath);
+    const blueBuffer = await fs.readFile(bluePath);
+    
+    return {
+      layers: {
+        red: redBuffer.toString('base64'),
+        green: greenBuffer.toString('base64'),
+        blue: blueBuffer.toString('base64')
+      },
+      files: {
+        red: 'layer-red-current.png',
+        green: 'layer-green-current.png',
+        blue: 'layer-blue-current.png'
+      }
+    };
+  } catch (error) {
+    console.error('Error loading PNG files:', error);
+    return null;
+  }
+}
+
+// Clear PNG files from images folder
+async function clearPngFiles() {
+  try {
+    const redPath = path.join(IMAGES_FOLDER, 'layer-red-current.png');
+    const greenPath = path.join(IMAGES_FOLDER, 'layer-green-current.png');
+    const bluePath = path.join(IMAGES_FOLDER, 'layer-blue-current.png');
+    
+    // Try to delete each file (ignore errors if files don't exist)
+    await Promise.allSettled([
+      fs.unlink(redPath),
+      fs.unlink(greenPath),
+      fs.unlink(bluePath)
+    ]);
+    
+    console.log('🗑️ Server: PNG files cleared from images folder');
+    return true;
+  } catch (error) {
+    console.error('Error clearing PNG files:', error);
     return false;
   }
 }
@@ -258,6 +408,84 @@ app.put('/api/color-tables/:layer', async (req, res) => {
   }
 });
 
+// Image Cache API
+app.get('/api/image-cache', async (req, res) => {
+  try {
+    // Try to load from PNG files first
+    const pngData = await loadPngFiles();
+    if (pngData) {
+      res.json({
+        layers: pngData.layers,
+        timestamp: new Date().toISOString(),
+        canvasSize: 16, // Default, could be enhanced
+        source: 'png'
+      });
+      return;
+    }
+    
+    // Fallback to JSON cache
+    const cache = await loadImageCache();
+    res.json({
+      ...cache,
+      source: 'json'
+    });
+  } catch (error) {
+    console.error('Error getting image cache:', error);
+    res.status(500).json({ error: 'Failed to load image cache' });
+  }
+});
+
+app.post('/api/image-cache', async (req, res) => {
+  try {
+    const { layers, canvasSize } = req.body;
+    
+    if (!layers || !canvasSize) {
+      return res.status(400).json({ error: 'Layers and canvasSize are required' });
+    }
+
+    // Save as JSON cache (for compatibility)
+    const cacheData = {
+      layers,
+      timestamp: new Date().toISOString(),
+      canvasSize
+    };
+    
+    const cacheSuccess = await saveImageCache(cacheData);
+    
+    // Save as PNG files
+    const pngFiles = await savePngFiles(layers, canvasSize);
+    
+    if (cacheSuccess && pngFiles) {
+      res.json({ 
+        success: true, 
+        cache: cacheData,
+        pngFiles: pngFiles
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to save image cache or PNG files' });
+    }
+  } catch (error) {
+    console.error('Error saving image cache:', error);
+    res.status(500).json({ error: 'Failed to save image cache' });
+  }
+});
+
+app.delete('/api/image-cache', async (req, res) => {
+  try {
+    const cacheSuccess = await clearImageCache();
+    const pngSuccess = await clearPngFiles();
+    
+    if (cacheSuccess && pngSuccess) {
+      res.json({ success: true, message: 'Image cache and PNG files cleared' });
+    } else {
+      res.status(500).json({ error: 'Failed to clear image cache or PNG files' });
+    }
+  } catch (error) {
+    console.error('Error clearing image cache:', error);
+    res.status(500).json({ error: 'Failed to clear image cache' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -266,10 +494,12 @@ app.get('/api/health', (req, res) => {
 // Start server
 async function startServer() {
   await ensurePalettesFile();
+  await ensureImagesFolder();
   
   app.listen(PORT, () => {
     console.log(`Palette server running on http://localhost:${PORT}`);
     console.log(`Palettes file: ${PALETTES_FILE}`);
+    console.log(`Images folder: ${IMAGES_FOLDER}`);
   });
 }
 

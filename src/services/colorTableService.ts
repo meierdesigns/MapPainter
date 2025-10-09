@@ -403,6 +403,31 @@ class ColorTableService {
       console.error('🔧 ColorTableService: Error updating color tables JSON after force sync:', error);
     });
   }
+
+  // Update color table from array (used by App.tsx)
+  updateColorTableFromArray(colorTableArray: ColorTableEntry[]): void {
+    console.log('🔧 ColorTableService: Updating color table from array', { colorTableArray });
+    
+    // Clear existing data
+    this.colorTables = {
+      red: [],
+      green: [],
+      blue: []
+    };
+    
+    // Group entries by layer based on their ID
+    colorTableArray.forEach(entry => {
+      const layerFromId = entry.id.split('-')[1] as 'red' | 'green' | 'blue';
+      if (layerFromId && ['red', 'green', 'blue'].includes(layerFromId)) {
+        this.colorTables[layerFromId].push(entry);
+      }
+    });
+    
+    console.log('🔧 ColorTableService: Updated color tables from array', this.colorTables);
+    
+    // Save to localStorage as backup
+    this.saveToStorage();
+  }
 }
 
 // Export singleton instance

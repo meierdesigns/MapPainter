@@ -25,6 +25,16 @@ export interface ServerState {
   appState: AppState;
 }
 
+export interface ImageCache {
+  layers: {
+    red: string | null;
+    green: string | null;
+    blue: string | null;
+  };
+  timestamp: string | null;
+  canvasSize: number;
+}
+
 class PaletteApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -126,6 +136,43 @@ class PaletteApiService {
       return true;
     } catch (error) {
       console.error('Server health check failed:', error);
+      return false;
+    }
+  }
+
+  // Image Cache API methods
+  async getPixelArtCache(): Promise<ImageCache | null> {
+    try {
+      return await this.request<ImageCache>('/image-cache');
+    } catch (error) {
+      console.error('Failed to load pixel art cache from server:', error);
+      return null;
+    }
+  }
+
+  async savePixelArtCache(layers: { red: string | null; green: string | null; blue: string | null }, canvasSize: number): Promise<boolean> {
+    try {
+      await this.request('/image-cache', {
+        method: 'POST',
+        body: JSON.stringify({ layers, canvasSize }),
+      });
+      console.log('🖼️ Successfully saved pixel art cache to server');
+      return true;
+    } catch (error) {
+      console.error('Failed to save pixel art cache to server:', error);
+      return false;
+    }
+  }
+
+  async clearPixelArtCache(): Promise<boolean> {
+    try {
+      await this.request('/image-cache', {
+        method: 'DELETE',
+      });
+      console.log('🗑️ Successfully cleared pixel art cache on server');
+      return true;
+    } catch (error) {
+      console.error('Failed to clear pixel art cache on server:', error);
       return false;
     }
   }
